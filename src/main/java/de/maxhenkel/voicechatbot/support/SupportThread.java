@@ -14,6 +14,7 @@ import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.MessageType;
 import org.javacord.api.entity.message.component.*;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
+import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.event.interaction.ButtonClickEvent;
 import org.javacord.api.event.interaction.ModalSubmitEvent;
 import org.javacord.api.event.interaction.SelectMenuChooseEvent;
@@ -22,11 +23,14 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.interaction.*;
 
 import java.awt.*;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class SupportThread {
@@ -44,6 +48,7 @@ public class SupportThread {
     public static final String CLOSE_COMMAND = "close";
     public static final String UNLOCK_COMMAND = "unlock";
     public static final String ISSUE_COMMAND = "issue";
+    public static final String CLEANUP_COMMAND = "cleanup";
 
     public static void init() {
         Channel channel = Main.API.getChannelById(Environment.SUPPORT_CHANNEL_ID).orElse(null);
@@ -51,8 +56,8 @@ public class SupportThread {
             throw new IllegalStateException("Can't find support channel!");
         }
 
-        ServerTextChannel SUPPORT_CHANNEL = channel.asServerTextChannel().orElse(null);
-        if (SUPPORT_CHANNEL == null) {
+        ServerTextChannel supportChannel = channel.asServerTextChannel().orElse(null);
+        if (supportChannel == null) {
             throw new IllegalStateException("Support channel is not a text channel");
         }
 
@@ -70,6 +75,28 @@ public class SupportThread {
                         Issues.ISSUES.stream().map(issue -> SlashCommandOptionChoice.create(issue.getName(), issue.getId())).collect(Collectors.toList())
                 )),
                 SupportThread::onIssueCommand);
+        CommandRegistry.registerCommand(CLEANUP_COMMAND, "Cleans up old threads", SupportThread::onCleanupCommand, PermissionType.ADMINISTRATOR);
+    }
+
+    private static void onCleanupCommand(SlashCommandCreateEvent event) {
+        event.getSlashCommandInteraction().respondLater().thenAccept(responseUpdater -> {
+            responseUpdater.setContent("Archiving all threads older than a week...").update();
+            AtomicInteger removed = new AtomicInteger();
+            Main.DB.getThreads(t -> {
+                ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
+                if (thread == null) {
+                    Main.DB.removeThread(t.getThread());
+                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update();
+                    return;
+                }
+                if (thread.getArchiveTimestamp().isBefore(Instant.now().minus(7, ChronoUnit.SECONDS))) {
+                    SupportThreadUtils.closeThread(thread, t, Main.API.getClientId());
+                    Main.DB.removeThread(t.getThread());
+                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update();
+                }
+            });
+            responseUpdater.setContent("Finished archiving %s threads.".formatted(removed.get())).update();
+        });
     }
 
     private static void onIssueCommand(SlashCommandCreateEvent event) {
@@ -204,7 +231,7 @@ public class SupportThread {
 
     private static void onSupportChannelMessage(MessageCreateEvent event) {
         MessageAuthor messageAuthor = event.getMessageAuthor();
-        if (messageAuthor.isBotUser()) {
+        if (!messageAuthor.isRegularUser()) {
             return;
         }
         Thread thread = SupportThreadUtils.getThread(messageAuthor.getId());

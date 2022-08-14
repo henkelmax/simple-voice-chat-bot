@@ -11,6 +11,7 @@ import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 
 import javax.annotation.Nullable;
+import java.util.function.Consumer;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -68,6 +69,10 @@ public class Database {
 
     public void setNotifyMessage(long threadId, long notifyMessage) {
         threads.findOneAndUpdate(eq("thread", threadId), set("notifyMessage", notifyMessage));
+    }
+
+    public void getThreads(Consumer<Thread> threadConsumer) {
+        threads.find(Thread.class).forEach(threadConsumer);
     }
 
 }
