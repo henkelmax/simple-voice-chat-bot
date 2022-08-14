@@ -1,6 +1,12 @@
-package de.maxhenkel.voicechatbot;
+package de.maxhenkel.voicechatbot.support;
 
+import de.maxhenkel.voicechatbot.Commands;
+import de.maxhenkel.voicechatbot.Date;
+import de.maxhenkel.voicechatbot.Environment;
+import de.maxhenkel.voicechatbot.Main;
 import de.maxhenkel.voicechatbot.db.Thread;
+import de.maxhenkel.voicechatbot.support.issues.Issue;
+import de.maxhenkel.voicechatbot.support.issues.Issues;
 import org.javacord.api.entity.channel.*;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageAuthor;
@@ -29,24 +35,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class SupportThread {
 
-    private static final String BUTTON_SUPPORT_KEY = "button_support_key";
-    private static final String BUTTON_ABORT_SUPPORT = "button_abort_support";
-    private static final String BUTTON_CONFIRM_ANSWERS = "button_confirm_answers";
-    private static final String MODAL_SUPPORT_KEY = "modal_support_key";
-    private static final String TEXT_FIELD_SUPPORT_KEY = "text_field_support_key";
-    private static final String SELECT_MENU_ISSUE = "select_menu_issue";
-    private static final String ISSUE_NOT_CONNECTED = "issue_not_connected";
-    private static final String ISSUE_MIC_NOT_WORKING = "issue_mic_not_working";
-    private static final String ISSUE_CONFIG = "issue_config";
-    private static final String ISSUE_OTHER = "issue_other";
-    private static final String ISSUE_CRASH = "issue_crash";
-    private static final String ISSUE_GENERAL_QUESTION = "issue_general_question";
-
-    public static final List<String> ISSUES = Arrays.asList(ISSUE_NOT_CONNECTED, ISSUE_MIC_NOT_WORKING, ISSUE_CONFIG, ISSUE_OTHER, ISSUE_CRASH, ISSUE_GENERAL_QUESTION);
+    public static final String BUTTON_SUPPORT_KEY = "button_support_key";
+    public static final String BUTTON_ABORT_SUPPORT = "button_abort_support";
+    public static final String BUTTON_CONFIRM_ANSWERS = "button_confirm_answers";
+    public static final String MODAL_SUPPORT_KEY = "modal_support_key";
+    public static final String TEXT_FIELD_SUPPORT_KEY = "text_field_support_key";
+    public static final String SELECT_MENU_ISSUE = "select_menu_issue";
 
     public static void init() {
         Channel channel = Main.API.getChannelById(Environment.SUPPORT_CHANNEL_ID).orElse(null);
@@ -267,7 +264,7 @@ public class SupportThread {
                                     Please note that timezones exist and people might not be available instantly.
                                     """)
                             .setColor(Color.GREEN),
-                    ActionRow.of(noHelpButton())
+                    ActionRow.of(closeThreadButton())
             );
             thread.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_DAY).update();
             addStaff(thread, t);
@@ -328,6 +325,17 @@ public class SupportThread {
     }
 
     private static void sendSupportTemplateMessage(ServerThreadChannel thread) {
+
+        SelectMenuBuilder selectMenuBuilder = new SelectMenuBuilder()
+                .setCustomId(SELECT_MENU_ISSUE)
+                .setMinimumValues(1)
+                .setMaximumValues(1)
+                .setPlaceholder("Select issue");
+
+        for (Issue issue : Issues.ISSUES) {
+            selectMenuBuilder.addOption(new SelectMenuOptionBuilder().setLabel(issue.getName()).setValue(issue.getId()).build());
+        }
+
         thread.sendMessage(
                 new EmbedBuilder()
                         .setTitle("Select your issue")
@@ -337,22 +345,8 @@ public class SupportThread {
                                 Alternatively you can take a look at <#%s>.
                                 """.formatted(Environment.COMMON_ISSUES_CHANNEL_ID))
                         .setColor(Color.BLUE),
-                ActionRow.of(
-                        new SelectMenuBuilder().setCustomId(SELECT_MENU_ISSUE)
-                                .addOption(new SelectMenuOptionBuilder().setLabel(translateIssue(ISSUE_NOT_CONNECTED)).setValue(ISSUE_NOT_CONNECTED).build())
-                                .addOption(new SelectMenuOptionBuilder().setLabel(translateIssue(ISSUE_MIC_NOT_WORKING)).setValue(ISSUE_MIC_NOT_WORKING).build())
-                                .addOption(new SelectMenuOptionBuilder().setLabel(translateIssue(ISSUE_CONFIG)).setValue(ISSUE_CONFIG).build())
-                                .addOption(new SelectMenuOptionBuilder().setLabel(translateIssue(ISSUE_OTHER)).setValue(ISSUE_OTHER).build())
-                                .addOption(new SelectMenuOptionBuilder().setLabel(translateIssue(ISSUE_CRASH)).setValue(ISSUE_CRASH).build())
-                                .addOption(new SelectMenuOptionBuilder().setLabel(translateIssue(ISSUE_GENERAL_QUESTION)).setValue(ISSUE_GENERAL_QUESTION).build())
-                                .setMinimumValues(1)
-                                .setMaximumValues(1)
-                                .setPlaceholder("Select issue")
-                                .build()
-                ),
-                ActionRow.of(
-                        noHelpButton()
-                )
+                ActionRow.of(selectMenuBuilder.build()),
+                ActionRow.of(closeThreadButton())
         );
     }
 
@@ -380,131 +374,26 @@ public class SupportThread {
         String selection = chosenOptions.get(0).getValue();
 
         clearAllComponents(thread).thenAccept(messages -> {
+            Issue issue = Issues.byId(selection);
+            if (issue == null) {
+                return;
+            }
             thread.sendMessage(new EmbedBuilder()
-                    .setTitle("`%s` selected.".formatted(translateIssue(selection)))
+                    .setTitle("`%s` selected.".formatted(issue.getName()))
                     .setDescription("""
                             Please provide additional information, so we can help you.
                             Once you did, you will get help by our team.
                             """)
                     .setColor(Color.GREEN)
+
             );
-            sendSupportQuestions(thread, selection);
+            issue.onSelectIssue(thread);
+            issue.sendQuestions(thread);
         });
     }
 
-    public static void sendSupportQuestions(ServerThreadChannel thread, String selection) {
-        if (ISSUE_NOT_CONNECTED.equals(selection)) {
-            thread.sendMessage(new EmbedBuilder()
-                    .setTitle("Disclaimer")
-                    .setDescription("""
-                            If you are hosting your server with a Minecraft hosting provider, please do the following:
-                                                        
-                            ⦁ Go to <#%s> and look if a guide for your hoster exists
-                            ⦁ If there is no guide for your hoster, please **contact the support of your hoster**
-                            ⦁ If you found a guide for your hoster in <#%s>, but it doesn't work, please also contact your hoster first
-                                                        
-                            **We can't help you with the configuration for specific Minecraft hosters! Please always contact their support first!**
-                            """.formatted(Environment.SERVER_HOSTING_CHANNEL_ID, Environment.SERVER_HOSTING_CHANNEL_ID))
-                    .setColor(Color.RED)
-            );
-        } else if (ISSUE_MIC_NOT_WORKING.equals(selection)) {
-            thread.sendMessage(new EmbedBuilder()
-                    .setTitle("Disclaimer")
-                    .setDescription("""
-                            If you are on **MacOS**, you need to patch your launcher in order to get your microphone working!
-                                                        
-                            ⦁ If you don't know how to patch your launcher, read [this](https://github.com/henkelmax/simple-voice-chat/tree/1.19.2/macos)
-                            ⦁ If there is no patcher popping up when launching your game, download the [standalone patcher](https://github.com/henkelmax/simple-voice-chat/tree/1.19.2/macos#standalone-version)
-                                                        
-                            """)
-                    .setColor(Color.RED)
-            );
-        } else if (ISSUE_CONFIG.equals(selection)) {
-            thread.sendMessage(new EmbedBuilder()
-                    .setTitle("Disclaimer")
-                    .setDescription("""
-                            While editing configuration files, make sure the client/server is stopped.
-                            If the config values keep resetting, this is most likely the problem.
-                            If you can't find the config files, make sure the client/server was started at least once, so that the files are generated.
-                            """)
-                    .addField("Fabric/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`")
-                    .addField("Forge config location", "*Server*:\n`<Your world folder>/serverconfig/voicechat-server.toml`\n*Client*:\n`config/voicechat-client.toml`")
-                    .addField("Bukkit/Spigot/Paper config location", "`plugins/voicechat/voicechat-server.properties`")
-                    .setColor(Color.RED)
-            );
-        } else if (ISSUE_CRASH.equals(selection)) {
-            thread.sendMessage(new EmbedBuilder()
-                    .setTitle("Disclaimer")
-                    .setDescription("""
-                            If you encountered a crash, please provide log files of both your client and server!
-                                                        
-                            Please send both logs as a file in this channel.
-                            """)
-                    .addField("Client logs", "`.minecraft/logs/latest.log`")
-                    .addField("Server logs", "`logs/latest.log`")
-                    .setColor(Color.RED)
-            );
-        }
-
-        thread.sendMessage(new EmbedBuilder()
-                        .setTitle("Please answer the following questions")
-                        .setDescription("""
-                                You can just send the answers as normal text messages in this thread.
-                                                                    
-                                %s
-                                                                    
-                                Once you answered every question, confirm them by pressing the `Confirm` button.
-                                """.formatted(getQuestions(selection).stream().map("⦁ %s"::formatted).collect(Collectors.joining("\n"))))
-                        .setColor(Color.BLUE),
-                ActionRow.of(
-                        noHelpButton(),
-                        new ButtonBuilder().setCustomId(BUTTON_CONFIRM_ANSWERS).setLabel("Confirm").setStyle(ButtonStyle.SUCCESS).build()
-                )
-        ).thenAccept(message -> {
-            Main.DB.unlockThread(thread.getId());
-        });
-    }
-
-    private static Button noHelpButton() {
+    public static Button closeThreadButton() {
         return new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("I don't need help anymore").setStyle(ButtonStyle.DANGER).build();
-    }
-
-    public static List<String> getQuestions(String id) {
-        List<String> questions = new ArrayList<>();
-        if (ISSUE_GENERAL_QUESTION.equals(id)) {
-            questions.add("What is your question?");
-        } else {
-            questions.add("What is your issue?");
-        }
-
-        questions.add("What Minecraft version are you using?");
-        questions.add("What voice chat mod version are you using on your game? *(Please post the full filename of the mod jar)*");
-        questions.add("What voice chat mod/plugin version are you using on your server? *(Please post the full filename of the mod/plugin jar)*");
-        if (ISSUE_NOT_CONNECTED.equals(id)) {
-            questions.add("What server software are you using? *(Fabric/Forge/Bukkit/Spigot/Paper etc)*");
-            questions.add("Are you using a proxy server? *(Bungeecord/Waterfall/Velocity etc)*");
-            questions.add("Are you using any DDoS protection? *(TCPShield etc)*");
-            questions.add("Where are you hosting your server? *(Bloom/Aternos/Own PC/VPS etc)*");
-        } else if (ISSUE_MIC_NOT_WORKING.equals(id)) {
-            questions.add("Operating system are you using? *(Windows/MacOS/Linux)*");
-            questions.add("Operating system version are you on? (MacOS 10.15/Windows 10 etc)");
-        } else if (ISSUE_CRASH.equals(id)) {
-            questions.add("Did the crash occur on the client or the server?");
-        }
-
-        return questions;
-    }
-
-    public static String translateIssue(String issue) {
-        return switch (issue) {
-            case ISSUE_NOT_CONNECTED -> "Voice chat not connected";
-            case ISSUE_MIC_NOT_WORKING -> "Microphone not working";
-            case ISSUE_CONFIG -> "Config file issues";
-            case ISSUE_OTHER -> "Other issue";
-            case ISSUE_CRASH -> "Crash";
-            case ISSUE_GENERAL_QUESTION -> "General question";
-            default -> "N/A";
-        };
     }
 
     private static void addStaff(ServerThreadChannel thread, Thread t) {
@@ -645,18 +534,22 @@ public class SupportThread {
                     if (value == null) {
                         return;
                     }
+                    Issue issue = Issues.byId(value);
+                    if (issue == null) {
+                        return;
+                    }
                     thread.sendMessage(new EmbedBuilder()
                             .setTitle("Issue type changed")
                             .setDescription("""
                                     <@%s> changed the issue type to `%s`.
                                                                         
                                     Please provide additional information, so we can help you.
-                                    """.formatted(event.getInteraction().getUser().getId(), translateIssue(value)))
+                                    """.formatted(event.getInteraction().getUser().getId(), issue.getName()))
                             .setColor(Color.GREEN)
                     );
-                    sendSupportQuestions(thread, value);
+                    issue.sendQuestions(thread);
                     interaction.createImmediateResponder()
-                            .setContent(translateIssue(value))
+                            .setContent(issue.getName())
                             .setFlags(MessageFlag.EPHEMERAL)
                             .respond();
                 }

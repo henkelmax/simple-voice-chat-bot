@@ -1,5 +1,6 @@
 package de.maxhenkel.voicechatbot;
 
+import de.maxhenkel.voicechatbot.support.issues.Issues;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.interaction.SlashCommand;
@@ -48,7 +49,7 @@ public class Commands {
 
         SlashCommand.with(ISSUE_COMMAND, "Sends an issue template to a thread", Collections.singletonList(
                         SlashCommandOption.createWithChoices(SlashCommandOptionType.STRING, "issue", "The issue to show", true,
-                                SupportThread.ISSUES.stream().map(s -> SlashCommandOptionChoice.create(SupportThread.translateIssue(s), s)).collect(Collectors.toList()))
+                                Issues.ISSUES.stream().map(issue -> SlashCommandOptionChoice.create(issue.getName(), issue.getId())).collect(Collectors.toList()))
                 ))
                 .setDefaultEnabledForPermissions(PermissionType.MODERATE_MEMBERS)
                 .createGlobal(Main.API).join();

@@ -1,6 +1,7 @@
 package de.maxhenkel.voicechatbot;
 
 import de.maxhenkel.voicechatbot.db.Database;
+import de.maxhenkel.voicechatbot.support.SupportThread;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
