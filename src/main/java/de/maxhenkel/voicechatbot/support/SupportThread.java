@@ -89,7 +89,7 @@ public class SupportThread {
                     responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update();
                     return;
                 }
-                if (thread.getArchiveTimestamp().isBefore(Instant.now().minus(7, ChronoUnit.SECONDS))) {
+                if (thread.getArchiveTimestamp().isBefore(Instant.now().minus(7, ChronoUnit.DAYS))) {
                     SupportThreadUtils.closeThread(thread, t, Main.API.getClientId());
                     Main.DB.removeThread(t.getThread());
                     responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update();
