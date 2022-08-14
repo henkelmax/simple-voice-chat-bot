@@ -1,9 +1,6 @@
 package de.maxhenkel.voicechatbot.support;
 
-import de.maxhenkel.voicechatbot.Commands;
-import de.maxhenkel.voicechatbot.Date;
-import de.maxhenkel.voicechatbot.Environment;
-import de.maxhenkel.voicechatbot.Main;
+import de.maxhenkel.voicechatbot.*;
 import de.maxhenkel.voicechatbot.db.Thread;
 import de.maxhenkel.voicechatbot.support.issues.Issue;
 import de.maxhenkel.voicechatbot.support.issues.Issues;
@@ -12,29 +9,25 @@ import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.MessageType;
-import org.javacord.api.entity.message.component.Button;
 import org.javacord.api.entity.message.component.*;
-import org.javacord.api.entity.message.embed.Embed;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.entity.server.Server;
-import org.javacord.api.entity.user.User;
 import org.javacord.api.event.interaction.ButtonClickEvent;
 import org.javacord.api.event.interaction.ModalSubmitEvent;
 import org.javacord.api.event.interaction.SelectMenuChooseEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
-import org.javacord.api.interaction.*;
+import org.javacord.api.interaction.ButtonInteraction;
+import org.javacord.api.interaction.ModalInteraction;
+import org.javacord.api.interaction.SlashCommandInteraction;
+import org.javacord.api.interaction.SlashCommandInteractionOption;
 
 import javax.annotation.Nullable;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class SupportThread {
 
@@ -51,26 +44,77 @@ public class SupportThread {
             throw new IllegalStateException("Can't find support channel!");
         }
 
-        ServerTextChannel supportChannel = channel.asServerTextChannel().orElse(null);
-        if (supportChannel == null) {
+        ServerTextChannel SUPPORT_CHANNEL = channel.asServerTextChannel().orElse(null);
+        if (SUPPORT_CHANNEL == null) {
             throw new IllegalStateException("Support channel is not a text channel");
         }
+
+        ButtonRegistry.registerButton(BUTTON_SUPPORT_KEY, SupportThread::onSupportKeyButtonPressed);
+        ButtonRegistry.registerButton(BUTTON_ABORT_SUPPORT, SupportThread::onAbortSupportButtonPressed);
+        ButtonRegistry.registerButton(BUTTON_CONFIRM_ANSWERS, SupportThread::onConfirmAnswersButtonPressed);
+    }
+
+    private static void onConfirmAnswersButtonPressed(ButtonClickEvent event) {
+        Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
+        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        if (t == null || thread == null) {
+            event.getInteraction().createImmediateResponder().respond();
+            return;
+        }
+        event.getButtonInteraction().createOriginalMessageUpdater().removeAllComponents().update();
+        onConfirmAnswers(thread, t, event);
+    }
+
+    private static void onAbortSupportButtonPressed(ButtonClickEvent event) {
+        SupportThreadUtils.closeThread(SupportThreadUtils.getThread(event.getInteraction()), SupportThreadUtils.getThreadIfOwner(event.getInteraction()), event.getInteraction().getUser().getId());
+        event.getButtonInteraction().createImmediateResponder().respond();
+    }
+
+    private static void onSupportKeyButtonPressed(ButtonClickEvent event) {
+        Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
+        if (t == null) {
+            event.getInteraction().createImmediateResponder().respond();
+            return;
+        }
+
+        ButtonInteraction buttonInteraction = event.getButtonInteraction();
+        buttonInteraction.respondWithModal(MODAL_SUPPORT_KEY, "Support Key",
+                ActionRow.of(TextInput.create(TextInputStyle.SHORT, TEXT_FIELD_SUPPORT_KEY, "Your Support Key"))
+        );
     }
 
     public static void onMessage(MessageCreateEvent event) {
-        if (event.getChannel().getId() == Environment.SUPPORT_CHANNEL_ID) {
-            ServerTextChannel channel = event.getChannel().asServerTextChannel().orElse(null);
-            if (channel == null) {
-                return;
-            }
-            onSupportChannelMessage(channel, event);
+        if (SupportThreadUtils.isSupportChannel(event.getChannel())) {
+            onSupportChannelMessage(event);
             return;
         }
-        ServerThreadChannel thread = event.getServerThreadChannel().orElse(null);
-        if (thread != null && thread.getParent().getId() == Environment.SUPPORT_CHANNEL_ID) {
+
+        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getChannel());
+        if (thread != null) {
             onSupportChannelThreadMessage(thread, event);
             return;
         }
+    }
+
+    private static void onSupportChannelMessage(MessageCreateEvent event) {
+        MessageAuthor messageAuthor = event.getMessageAuthor();
+        if (messageAuthor.isBotUser()) {
+            return;
+        }
+        Thread thread = SupportThreadUtils.getThread(messageAuthor.getId());
+        if (thread != null) {
+            event.getMessage().reply("Hey <@%s>, you already have a support thread: <#%s>".formatted(event.getMessageAuthor().getId(), thread.getThread())).thenAccept(message -> {
+                Main.EXECUTOR.schedule(() -> {
+                    event.getMessage().delete();
+                    message.delete();
+                }, 10, TimeUnit.SECONDS);
+            });
+            return;
+        }
+
+        event.getMessage()
+                .createThread("Support thread for %s".formatted(messageAuthor.getDisplayName()), AutoArchiveDuration.ONE_HOUR)
+                .thenAccept(t -> onThreadCreated(t, messageAuthor));
     }
 
     private static void onSupportChannelThreadMessage(ServerThreadChannel channel, MessageCreateEvent event) {
@@ -86,7 +130,7 @@ public class SupportThread {
         }
 
         if (thread.isUnlocked()) {
-            if (isStaff(messageAuthor)) {
+            if (SupportThreadUtils.isStaff(messageAuthor)) {
                 channel.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update();
             }
             return;
@@ -105,74 +149,6 @@ public class SupportThread {
             }, 10, TimeUnit.SECONDS);
         });
 
-    }
-
-    public static boolean isStaff(MessageAuthor author) {
-        User user = author.asUser().orElse(null);
-        if (user == null) {
-            return false;
-        }
-        Server server = author.getMessage().getServer().orElse(null);
-        if (server == null) {
-            return false;
-        }
-        return isStaff(user, server);
-    }
-
-    public static boolean isStaff(User user, @Nullable Server server) {
-        if (server == null) {
-            return false;
-        }
-        return user.getRoles(server).stream().anyMatch(role -> role.getId() == Environment.SUPPORT_ROLE);
-    }
-
-    private static void onSupportChannelMessage(ServerTextChannel channel, MessageCreateEvent event) {
-        MessageAuthor messageAuthor = event.getMessageAuthor();
-        if (messageAuthor.isBotUser()) {
-            return;
-        }
-        Thread thread = getThread(messageAuthor.getId());
-        if (thread != null) {
-            event.getMessage().reply("Hey <@%s>, you already have a support thread: <#%s>".formatted(event.getMessageAuthor().getId(), thread.getThread())).thenAccept(message -> {
-                Main.EXECUTOR.schedule(() -> {
-                    event.getMessage().delete();
-                    message.delete();
-                }, 10, TimeUnit.SECONDS);
-            });
-            return;
-        }
-
-        event.getMessage()
-                .createThread("Support thread for %s".formatted(messageAuthor.getDisplayName()), AutoArchiveDuration.ONE_HOUR)
-                .thenAccept(t -> onThreadCreated(t, messageAuthor));
-    }
-
-    @Nullable
-    private static Thread getThread(long user) {
-        Thread thread = Main.DB.getThreadByUser(user);
-
-        if (thread == null) {
-            return null;
-        }
-
-        Channel c = Main.API.getChannelById(thread.getThread()).orElse(null);
-        if (c == null) {
-            Main.DB.removeThread(thread.getThread());
-            return null;
-        }
-
-        ServerThreadChannel threadChannel = c.asServerThreadChannel().orElse(null);
-
-        if (threadChannel == null) {
-            Main.DB.removeThread(thread.getThread());
-            return null;
-        }
-
-        if (threadChannel.isLocked()) {
-            Main.DB.removeThread(thread.getThread());
-            return null;
-        }
-        return thread;
     }
 
     private static void onThreadCreated(ServerThreadChannel thread, MessageAuthor messageAuthor) {
@@ -205,41 +181,6 @@ public class SupportThread {
         );
     }
 
-    public static void onButtonClick(ButtonClickEvent event) {
-        ServerThreadChannel thread = getThread(event.getInteraction());
-        if (thread == null || thread.getParent().getId() != Environment.SUPPORT_CHANNEL_ID) {
-            return;
-        }
-        Thread t = getThreadIfOwner(event.getInteraction());
-        if (t == null) {
-            event.getInteraction().createImmediateResponder().respond();
-            return;
-        }
-        // Only the creator of the thread can interact with buttons
-
-        String id = event.getButtonInteraction().getCustomId();
-        if (BUTTON_ABORT_SUPPORT.equals(id)) {
-            closeThread(thread, t, event.getButtonInteraction().getUser().getId());
-            event.getButtonInteraction().createImmediateResponder().respond();
-        } else if (BUTTON_SUPPORT_KEY.equals(id)) {
-            ButtonInteraction buttonInteraction = event.getButtonInteraction();
-            buttonInteraction.respondWithModal(MODAL_SUPPORT_KEY, "Support Key",
-                    ActionRow.of(TextInput.create(TextInputStyle.SHORT, TEXT_FIELD_SUPPORT_KEY, "Your Support Key"))
-            );
-        } else if (BUTTON_CONFIRM_ANSWERS.equals(id)) {
-            event.getButtonInteraction().createOriginalMessageUpdater().removeAllComponents().update();
-            onConfirmAnswers(thread, t, event);
-        }
-    }
-
-    private static void closeThread(ServerThreadChannel thread, Thread t, long locker) {
-        thread.sendMessage(new EmbedBuilder().setDescription("<@%s> locked this thread.".formatted(locker)).setColor(Color.RED)).thenAccept(message -> {
-            Main.DB.removeThread(thread.getId());
-            thread.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update();
-        });
-        addNotifyUpdate(t, "Thread locked by <@%s>".formatted(locker));
-    }
-
     private static void onConfirmAnswers(ServerThreadChannel thread, Thread t, ButtonClickEvent event) {
         thread.getMessages(10).thenAccept(messages -> {
             if (messages.stream().noneMatch(message -> message.getAuthor().getId() == t.getUser())) {
@@ -264,19 +205,19 @@ public class SupportThread {
                                     Please note that timezones exist and people might not be available instantly.
                                     """)
                             .setColor(Color.GREEN),
-                    ActionRow.of(closeThreadButton())
+                    ActionRow.of(SupportThreadUtils.closeThreadButton())
             );
             thread.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_DAY).update();
-            addStaff(thread, t);
+            SupportThreadUtils.notifyStaff(thread, t);
         });
     }
 
     public static void onModalSubmit(ModalSubmitEvent event) {
-        ServerThreadChannel thread = getThread(event.getInteraction());
+        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         if (thread == null) {
             return;
         }
-        Thread t = getThreadIfOwner(event.getInteraction());
+        Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         if (t == null) {
             event.getInteraction().createImmediateResponder().respond();
             return;
@@ -292,7 +233,7 @@ public class SupportThread {
     private static void onSupportKeyProvided(ServerThreadChannel thread, ModalInteraction modalInteraction, String supportKey) {
         modalInteraction.createImmediateResponder().respond();
         long userId = modalInteraction.getUser().getId();
-        if (!verifySupportKey(supportKey)) {
+        if (!SupportKey.verifySupportKey(supportKey)) {
             thread.sendMessage(new EmbedBuilder().setDescription("<@%s> provided an invalid support key: `%s`.".formatted(userId, supportKey)).setColor(Color.RED), ActionRow.of(
                     new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Let me try again").setStyle(ButtonStyle.PRIMARY).build()
             ));
@@ -346,16 +287,16 @@ public class SupportThread {
                                 """.formatted(Environment.COMMON_ISSUES_CHANNEL_ID))
                         .setColor(Color.BLUE),
                 ActionRow.of(selectMenuBuilder.build()),
-                ActionRow.of(closeThreadButton())
+                ActionRow.of(SupportThreadUtils.closeThreadButton())
         );
     }
 
     public static void onSelectMenuChoose(SelectMenuChooseEvent event) {
-        ServerThreadChannel thread = getThread(event.getInteraction());
+        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         if (thread == null) {
             return;
         }
-        Thread t = getThreadIfOwner(event.getInteraction());
+        Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         if (t == null) {
             event.getInteraction().createImmediateResponder().respond();
             return;
@@ -392,115 +333,18 @@ public class SupportThread {
         });
     }
 
-    public static Button closeThreadButton() {
-        return new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("I don't need help anymore").setStyle(ButtonStyle.DANGER).build();
-    }
-
-    private static void addStaff(ServerThreadChannel thread, Thread t) {
-        Channel c = Main.API.getChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL).orElse(null);
-        if (c == null) {
-            Main.LOGGER.warn("Failed to find notification channel");
-            return;
-        }
-        TextChannel textChannel = c.asTextChannel().orElse(null);
-        if (textChannel == null) {
-            Main.LOGGER.warn("Notification channel is not a text channel");
-            return;
-        }
-
-        if (t.getNotifyMessage() > 0) {
-            addNotifyUpdate(t, "Added staff again");
-            return;
-        }
-
-        textChannel.sendMessage(new EmbedBuilder()
-                .setTitle("New Support Request")
-                .addField("User", "<@%s>".formatted(t.getUser()))
-                .addField("Thread", "<#%s>".formatted(thread.getId()))
-                .setTimestampToNow()
-                .setColor(Color.BLUE)
-        ).thenAccept(message -> {
-            Main.DB.setNotifyMessage(t.getThread(), message.getId());
-        });
-    }
-
-    private static void addNotifyUpdate(Thread t, String message) {
-        Channel c = Main.API.getChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL).orElse(null);
-        if (c == null) {
-            Main.LOGGER.warn("Failed to find notification channel");
-            return;
-        }
-        TextChannel textChannel = c.asTextChannel().orElse(null);
-        if (textChannel == null) {
-            Main.LOGGER.warn("Notification channel is not a text channel");
-            return;
-        }
-
-        if (t.getNotifyMessage() <= 0) {
-            return;
-        }
-        Main.API.getMessageById(t.getNotifyMessage(), textChannel).thenAccept(msg -> {
-            List<Embed> embeds = msg.getEmbeds();
-            if (embeds.isEmpty()) {
-                return;
-            }
-            EmbedBuilder embed = embeds.get(0).toBuilder();
-            embed.addField("Update %s".formatted(Date.currentDate()), message);
-
-            msg.createUpdater().setEmbed(embed).applyChanges();
-        });
-    }
-
-    private static ServerThreadChannel getThread(InteractionBase interactionBase) {
-        TextChannel channel = interactionBase.getChannel().orElse(null);
-        if (channel == null) {
-            return null;
-        }
-        ServerThreadChannel thread = channel.asServerThreadChannel().orElse(null);
-        if (thread == null) {
-            return null;
-        }
-        return thread;
-    }
-
-    private static Thread getThreadIfOwner(InteractionBase interactionBase) {
-        Thread t = Main.DB.getThreadByUser(interactionBase.getUser().getId());
-        TextChannel channel = interactionBase.getChannel().orElse(null);
-        if (channel == null || t == null || t.getThread() != channel.getId()) {
-            return null;
-        }
-        return t;
-    }
-
-    private static final Pattern SUPPORT_KEY_PATTERN = Pattern.compile("^S-(?<numbers>[1-9]+)$");
-
-    private static boolean verifySupportKey(String supportKey) {
-        if (supportKey == null) {
-            return false;
-        }
-
-        Matcher matcher = SUPPORT_KEY_PATTERN.matcher(supportKey);
-        if (!matcher.matches()) {
-            return false;
-        }
-
-        String numbers = matcher.group("numbers");
-
-        return Arrays.stream(numbers.split("")).map(Integer::parseInt).reduce(0, Integer::sum) == 69; // Nice!
-    }
 
     public static void onSlashCommand(SlashCommandCreateEvent event) {
-        @Nullable ServerThreadChannel thread = getThread(event.getInteraction());
-
+        @Nullable ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
 
         SlashCommandInteraction interaction = event.getSlashCommandInteraction();
         String commandName = interaction.getCommandName();
         if (Commands.CLOSE_COMMAND.equals(commandName)) {
             if (thread != null) {
-                if (isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+                if (SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
                     Thread t = Main.DB.getThread(thread.getId());
                     if (t != null) {
-                        closeThread(thread, t, interaction.getUser().getId());
+                        SupportThreadUtils.closeThread(thread, t, interaction.getUser().getId());
                         interaction.createImmediateResponder()
                                 .setContent("Thread closed")
                                 .setFlags(MessageFlag.EPHEMERAL)
@@ -515,7 +359,7 @@ public class SupportThread {
             }
         } else if (Commands.UNLOCK_COMMAND.equals(commandName)) {
             if (thread != null) {
-                if (isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+                if (SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
                     Main.DB.unlockThread(thread.getId());
                     interaction.createImmediateResponder()
                             .setContent("Thread unlocked")
@@ -525,7 +369,7 @@ public class SupportThread {
             }
         } else if (Commands.ISSUE_COMMAND.equals(commandName)) {
             if (thread != null) {
-                if (isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+                if (SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
                     List<SlashCommandInteractionOption> arguments = event.getSlashCommandInteraction().getArguments();
                     if (arguments.size() != 1) {
                         return;
@@ -556,4 +400,5 @@ public class SupportThread {
             }
         }
     }
+
 }

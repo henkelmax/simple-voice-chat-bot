@@ -2,6 +2,7 @@ package de.maxhenkel.voicechatbot.support.issues;
 
 import de.maxhenkel.voicechatbot.Main;
 import de.maxhenkel.voicechatbot.support.SupportThread;
+import de.maxhenkel.voicechatbot.support.SupportThreadUtils;
 import org.javacord.api.entity.channel.ServerThreadChannel;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.component.ActionRow;
@@ -68,7 +69,7 @@ public class BaseIssue implements Issue {
                                 """.formatted(getQuestions().stream().map("⦁ %s"::formatted).collect(Collectors.joining("\n"))))
                         .setColor(Color.BLUE),
                 ActionRow.of(
-                        SupportThread.closeThreadButton(),
+                        SupportThreadUtils.closeThreadButton(),
                         new ButtonBuilder().setCustomId(SupportThread.BUTTON_CONFIRM_ANSWERS).setLabel("Confirm").setStyle(ButtonStyle.SUCCESS).build()
                 )
         ).thenAccept(message -> {

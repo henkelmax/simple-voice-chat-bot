@@ -27,13 +27,16 @@ public class Main {
         API = new DiscordApiBuilder().setToken(Environment.TOKEN).setAllIntents().login().join();
         LOGGER.info("Logged in");
 
+        LOGGER.info("Setting activity");
         API.updateActivity(ActivityType.WATCHING, "Support");
 
         Commands.clearCommands();
+        LOGGER.info("Re-adding commands");
         Commands.initCommands();
 
+        ButtonRegistry.init();
+
         API.addMessageCreateListener(SupportThread::onMessage);
-        API.addButtonClickListener(SupportThread::onButtonClick);
         API.addModalSubmitListener(SupportThread::onModalSubmit);
         API.addSelectMenuChooseListener(SupportThread::onSelectMenuChoose);
         API.addSlashCommandCreateListener(SupportThread::onSlashCommand);
