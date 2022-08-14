@@ -21,6 +21,7 @@ import org.javacord.api.interaction.InteractionBase;
 import javax.annotation.Nullable;
 import java.awt.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class SupportThreadUtils {
 
@@ -128,23 +129,23 @@ public class SupportThreadUtils {
         return new ButtonBuilder().setCustomId(SupportThread.BUTTON_ABORT_SUPPORT).setLabel("I don't need help anymore").setStyle(ButtonStyle.DANGER).build();
     }
 
-    public static void notifyStaff(ServerThreadChannel thread, Thread t) {
+    public static CompletableFuture<Void> notifyStaff(ServerThreadChannel thread, Thread t) {
         Channel c = Main.API.getChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL).orElse(null);
         if (c == null) {
             Main.LOGGER.warn("Failed to find notification channel");
-            return;
+            return CompletableFuture.completedFuture(null);
         }
         TextChannel textChannel = c.asTextChannel().orElse(null);
         if (textChannel == null) {
             Main.LOGGER.warn("Notification channel is not a text channel");
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
         if (t.getNotifyMessage() > 0) {
             updateStaffNotification(t, "Added staff again");
-            return;
+            return CompletableFuture.completedFuture(null);
         }
-
+        CompletableFuture<Void> future = new CompletableFuture<>();
         textChannel.sendMessage(new EmbedBuilder()
                 .setTitle("New Support Request")
                 .addField("User", "<@%s>".formatted(t.getUser()))
@@ -153,10 +154,23 @@ public class SupportThreadUtils {
                 .setColor(Color.BLUE)
         ).thenAccept(message -> {
             Main.DB.setNotifyMessage(t.getThread(), message.getId());
+            future.complete(null);
+        }).exceptionally(throwable -> {
+            future.completeExceptionally(throwable);
+            return null;
         });
+        return future;
     }
 
-    private static void updateStaffNotification(Thread t, String message) {
+    public static CompletableFuture<Void> notifyStaff(ServerThreadChannel thread) {
+        Thread t = Main.DB.getThread(thread.getId());
+        if (t == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return notifyStaff(thread, t);
+    }
+
+    public static void updateStaffNotification(Thread t, String message) {
         Channel c = Main.API.getChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL).orElse(null);
         if (c == null) {
             Main.LOGGER.warn("Failed to find notification channel");

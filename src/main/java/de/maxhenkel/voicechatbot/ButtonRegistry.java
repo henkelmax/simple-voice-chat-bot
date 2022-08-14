@@ -24,7 +24,7 @@ public class ButtonRegistry {
 
     public static void registerButton(String id, ButtonClickListener listener) {
         if (buttons.containsKey(id)) {
-            throw new IllegalStateException("Button with ID %s already registered".formatted(id));
+            throw new IllegalStateException("Button with ID '%s' already registered".formatted(id));
         }
         buttons.put(id, new Button(id, listener));
     }

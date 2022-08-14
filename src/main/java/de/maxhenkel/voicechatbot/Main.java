@@ -30,16 +30,12 @@ public class Main {
         LOGGER.info("Setting activity");
         API.updateActivity(ActivityType.WATCHING, "Support");
 
-        Commands.clearCommands();
-        LOGGER.info("Re-adding commands");
-        Commands.initCommands();
-
         ButtonRegistry.init();
+        CommandRegistry.init();
 
         API.addMessageCreateListener(SupportThread::onMessage);
         API.addModalSubmitListener(SupportThread::onModalSubmit);
         API.addSelectMenuChooseListener(SupportThread::onSelectMenuChoose);
-        API.addSlashCommandCreateListener(SupportThread::onSlashCommand);
 
         SupportThread.init();
         LOGGER.info("Successfully initialized");

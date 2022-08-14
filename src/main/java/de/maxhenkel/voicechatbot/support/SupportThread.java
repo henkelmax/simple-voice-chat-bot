@@ -4,7 +4,10 @@ import de.maxhenkel.voicechatbot.*;
 import de.maxhenkel.voicechatbot.db.Thread;
 import de.maxhenkel.voicechatbot.support.issues.Issue;
 import de.maxhenkel.voicechatbot.support.issues.Issues;
-import org.javacord.api.entity.channel.*;
+import org.javacord.api.entity.channel.AutoArchiveDuration;
+import org.javacord.api.entity.channel.Channel;
+import org.javacord.api.entity.channel.ServerTextChannel;
+import org.javacord.api.entity.channel.ServerThreadChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.MessageFlag;
@@ -16,27 +19,31 @@ import org.javacord.api.event.interaction.ModalSubmitEvent;
 import org.javacord.api.event.interaction.SelectMenuChooseEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
-import org.javacord.api.interaction.ButtonInteraction;
-import org.javacord.api.interaction.ModalInteraction;
-import org.javacord.api.interaction.SlashCommandInteraction;
-import org.javacord.api.interaction.SlashCommandInteractionOption;
+import org.javacord.api.interaction.*;
 
-import javax.annotation.Nullable;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class SupportThread {
 
     public static final String BUTTON_SUPPORT_KEY = "button_support_key";
     public static final String BUTTON_ABORT_SUPPORT = "button_abort_support";
     public static final String BUTTON_CONFIRM_ANSWERS = "button_confirm_answers";
+
     public static final String MODAL_SUPPORT_KEY = "modal_support_key";
+
     public static final String TEXT_FIELD_SUPPORT_KEY = "text_field_support_key";
+
     public static final String SELECT_MENU_ISSUE = "select_menu_issue";
+
+    public static final String CLOSE_COMMAND = "close";
+    public static final String UNLOCK_COMMAND = "unlock";
+    public static final String ISSUE_COMMAND = "issue";
 
     public static void init() {
         Channel channel = Main.API.getChannelById(Environment.SUPPORT_CHANNEL_ID).orElse(null);
@@ -52,6 +59,105 @@ public class SupportThread {
         ButtonRegistry.registerButton(BUTTON_SUPPORT_KEY, SupportThread::onSupportKeyButtonPressed);
         ButtonRegistry.registerButton(BUTTON_ABORT_SUPPORT, SupportThread::onAbortSupportButtonPressed);
         ButtonRegistry.registerButton(BUTTON_CONFIRM_ANSWERS, SupportThread::onConfirmAnswersButtonPressed);
+        CommandRegistry.registerCommand(CLOSE_COMMAND, "Closes a support thread", SupportThread::onCloseCommand);
+        CommandRegistry.registerCommand(UNLOCK_COMMAND, "Unlocks a thread", SupportThread::onUnlockCommand);
+        CommandRegistry.registerCommand(ISSUE_COMMAND, "Sends an issue template to a thread",
+                Collections.singletonList(SlashCommandOption.createWithChoices(
+                        SlashCommandOptionType.STRING,
+                        "issue",
+                        "The issue to show",
+                        true,
+                        Issues.ISSUES.stream().map(issue -> SlashCommandOptionChoice.create(issue.getName(), issue.getId())).collect(Collectors.toList())
+                )),
+                SupportThread::onIssueCommand);
+    }
+
+    private static void onIssueCommand(SlashCommandCreateEvent event) {
+        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+        if (thread == null) {
+            return;
+        }
+        if (!SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+            return;
+        }
+        List<SlashCommandInteractionOption> arguments = event.getSlashCommandInteraction().getArguments();
+        if (arguments.size() != 1) {
+            return;
+        }
+        String value = arguments.get(0).getStringValue().orElse(null);
+        if (value == null) {
+            return;
+        }
+        Issue issue = Issues.byId(value);
+        if (issue == null) {
+            return;
+        }
+        thread.sendMessage(new EmbedBuilder()
+                .setTitle("Issue type changed")
+                .setDescription("""
+                        <@%s> changed the issue type to `%s`.
+                                                            
+                        Please provide additional information, so we can help you.
+                        """.formatted(event.getInteraction().getUser().getId(), issue.getName()))
+                .setColor(Color.GREEN)
+        );
+        issue.onSelectIssue(thread);
+        issue.sendQuestions(thread);
+        interaction.createImmediateResponder()
+                .setContent(issue.getName())
+                .setFlags(MessageFlag.EPHEMERAL)
+                .respond();
+    }
+
+    private static void onUnlockCommand(SlashCommandCreateEvent event) {
+        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+        if (thread == null) {
+            return;
+        }
+        if (!SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+            return;
+        }
+
+        Main.DB.unlockThread(thread.getId());
+        SupportThreadUtils.notifyStaff(thread).thenAccept(unused -> {
+            Thread t = Main.DB.getThread(thread.getId());
+            if (t != null) {
+                SupportThreadUtils.updateStaffNotification(t, "<@%s> unlocked the thread".formatted(event.getInteraction().getUser().getId()));
+            }
+        });
+        interaction.createImmediateResponder()
+                .setContent("Thread unlocked")
+                .setFlags(MessageFlag.EPHEMERAL)
+                .respond();
+
+        //TODO send embed that staff joined
+    }
+
+    private static void onCloseCommand(SlashCommandCreateEvent event) {
+        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+        if (thread == null) {
+            interaction.createImmediateResponder().respond();
+            return;
+        }
+        if (!SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+            return;
+        }
+        Thread t = Main.DB.getThread(thread.getId());
+        if (t != null) {
+            SupportThreadUtils.closeThread(thread, t, interaction.getUser().getId());
+            interaction.createImmediateResponder()
+                    .setContent("Thread closed")
+                    .setFlags(MessageFlag.EPHEMERAL)
+                    .respond();
+        } else {
+            interaction.createImmediateResponder()
+                    .setContent("Can't find thread")
+                    .setFlags(MessageFlag.EPHEMERAL)
+                    .respond();
+        }
     }
 
     private static void onConfirmAnswersButtonPressed(ButtonClickEvent event) {
@@ -266,7 +372,6 @@ public class SupportThread {
     }
 
     private static void sendSupportTemplateMessage(ServerThreadChannel thread) {
-
         SelectMenuBuilder selectMenuBuilder = new SelectMenuBuilder()
                 .setCustomId(SELECT_MENU_ISSUE)
                 .setMinimumValues(1)
@@ -331,74 +436,6 @@ public class SupportThread {
             issue.onSelectIssue(thread);
             issue.sendQuestions(thread);
         });
-    }
-
-
-    public static void onSlashCommand(SlashCommandCreateEvent event) {
-        @Nullable ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
-
-        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
-        String commandName = interaction.getCommandName();
-        if (Commands.CLOSE_COMMAND.equals(commandName)) {
-            if (thread != null) {
-                if (SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
-                    Thread t = Main.DB.getThread(thread.getId());
-                    if (t != null) {
-                        SupportThreadUtils.closeThread(thread, t, interaction.getUser().getId());
-                        interaction.createImmediateResponder()
-                                .setContent("Thread closed")
-                                .setFlags(MessageFlag.EPHEMERAL)
-                                .respond();
-                    } else {
-                        interaction.createImmediateResponder()
-                                .setContent("Can't find thread")
-                                .setFlags(MessageFlag.EPHEMERAL)
-                                .respond();
-                    }
-                }
-            }
-        } else if (Commands.UNLOCK_COMMAND.equals(commandName)) {
-            if (thread != null) {
-                if (SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
-                    Main.DB.unlockThread(thread.getId());
-                    interaction.createImmediateResponder()
-                            .setContent("Thread unlocked")
-                            .setFlags(MessageFlag.EPHEMERAL)
-                            .respond();
-                }
-            }
-        } else if (Commands.ISSUE_COMMAND.equals(commandName)) {
-            if (thread != null) {
-                if (SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
-                    List<SlashCommandInteractionOption> arguments = event.getSlashCommandInteraction().getArguments();
-                    if (arguments.size() != 1) {
-                        return;
-                    }
-                    String value = arguments.get(0).getStringValue().orElse(null);
-                    if (value == null) {
-                        return;
-                    }
-                    Issue issue = Issues.byId(value);
-                    if (issue == null) {
-                        return;
-                    }
-                    thread.sendMessage(new EmbedBuilder()
-                            .setTitle("Issue type changed")
-                            .setDescription("""
-                                    <@%s> changed the issue type to `%s`.
-                                                                        
-                                    Please provide additional information, so we can help you.
-                                    """.formatted(event.getInteraction().getUser().getId(), issue.getName()))
-                            .setColor(Color.GREEN)
-                    );
-                    issue.sendQuestions(thread);
-                    interaction.createImmediateResponder()
-                            .setContent(issue.getName())
-                            .setFlags(MessageFlag.EPHEMERAL)
-                            .respond();
-                }
-            }
-        }
     }
 
 }
