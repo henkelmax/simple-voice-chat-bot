@@ -8,6 +8,7 @@ import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.message.MessageType;
 import org.javacord.api.entity.message.component.Button;
 import org.javacord.api.entity.message.component.*;
+import org.javacord.api.entity.message.embed.Embed;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
@@ -201,8 +202,8 @@ public class SupportThread {
                         )
                         .setColor(Color.BLUE),
                 ActionRow.of(
-                        new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Get Support!").build(),
-                        new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("Nevermind...").build()
+                        new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Get Support!").setStyle(ButtonStyle.PRIMARY).build(),
+                        new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("Nevermind...").setStyle(ButtonStyle.DANGER).build()
                 )
         );
     }
@@ -221,7 +222,7 @@ public class SupportThread {
 
         String id = event.getButtonInteraction().getCustomId();
         if (BUTTON_ABORT_SUPPORT.equals(id)) {
-            closeThread(thread, event.getButtonInteraction().getUser().getId());
+            closeThread(thread, t, event.getButtonInteraction().getUser().getId());
             event.getButtonInteraction().createImmediateResponder().respond();
         } else if (BUTTON_SUPPORT_KEY.equals(id)) {
             ButtonInteraction buttonInteraction = event.getButtonInteraction();
@@ -234,11 +235,12 @@ public class SupportThread {
         }
     }
 
-    private static void closeThread(ServerThreadChannel thread, long locker) {
+    private static void closeThread(ServerThreadChannel thread, Thread t, long locker) {
         thread.sendMessage(new EmbedBuilder().setDescription("<@%s> locked this thread.".formatted(locker)).setColor(Color.RED)).thenAccept(message -> {
             Main.DB.removeThread(thread.getId());
             thread.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update();
         });
+        addNotifyUpdate(t, "Thread locked by <@%s>".formatted(locker));
     }
 
     private static void onConfirmAnswers(ServerThreadChannel thread, Thread t, ButtonClickEvent event) {
@@ -295,7 +297,7 @@ public class SupportThread {
         long userId = modalInteraction.getUser().getId();
         if (!verifySupportKey(supportKey)) {
             thread.sendMessage(new EmbedBuilder().setDescription("<@%s> provided an invalid support key: `%s`.".formatted(userId, supportKey)).setColor(Color.RED), ActionRow.of(
-                    new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Let me try again").build()
+                    new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Let me try again").setStyle(ButtonStyle.PRIMARY).build()
             ));
             return;
         }
@@ -456,7 +458,7 @@ public class SupportThread {
                         .setColor(Color.BLUE),
                 ActionRow.of(
                         noHelpButton(),
-                        new ButtonBuilder().setCustomId(BUTTON_CONFIRM_ANSWERS).setLabel("Confirm").build()
+                        new ButtonBuilder().setCustomId(BUTTON_CONFIRM_ANSWERS).setLabel("Confirm").setStyle(ButtonStyle.SUCCESS).build()
                 )
         ).thenAccept(message -> {
             Main.DB.unlockThread(thread.getId());
@@ -464,7 +466,7 @@ public class SupportThread {
     }
 
     private static Button noHelpButton() {
-        return new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("I don't need help anymore").build();
+        return new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("I don't need help anymore").setStyle(ButtonStyle.DANGER).build();
     }
 
     public static List<String> getQuestions(String id) {
@@ -517,6 +519,11 @@ public class SupportThread {
             return;
         }
 
+        if (t.getNotifyMessage() > 0) {
+            addNotifyUpdate(t, "Added staff again");
+            return;
+        }
+
         textChannel.sendMessage(new EmbedBuilder()
                 .setTitle("New Support Request")
                 .addField("User", "<@%s>".formatted(t.getUser()))
@@ -524,7 +531,34 @@ public class SupportThread {
                 .setTimestampToNow()
                 .setColor(Color.BLUE)
         ).thenAccept(message -> {
-            message.addReaction("✅");
+            Main.DB.setNotifyMessage(t.getThread(), message.getId());
+        });
+    }
+
+    private static void addNotifyUpdate(Thread t, String message) {
+        Channel c = Main.API.getChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL).orElse(null);
+        if (c == null) {
+            Main.LOGGER.warn("Failed to find notification channel");
+            return;
+        }
+        TextChannel textChannel = c.asTextChannel().orElse(null);
+        if (textChannel == null) {
+            Main.LOGGER.warn("Notification channel is not a text channel");
+            return;
+        }
+
+        if (t.getNotifyMessage() <= 0) {
+            return;
+        }
+        Main.API.getMessageById(t.getNotifyMessage(), textChannel).thenAccept(msg -> {
+            List<Embed> embeds = msg.getEmbeds();
+            if (embeds.isEmpty()) {
+                return;
+            }
+            EmbedBuilder embed = embeds.get(0).toBuilder();
+            embed.addField("Update %s".formatted(Date.currentDate()), message);
+
+            msg.createUpdater().setEmbed(embed).applyChanges();
         });
     }
 
@@ -569,16 +603,25 @@ public class SupportThread {
     public static void onSlashCommand(SlashCommandCreateEvent event) {
         @Nullable ServerThreadChannel thread = getThread(event.getInteraction());
 
+
         SlashCommandInteraction interaction = event.getSlashCommandInteraction();
         String commandName = interaction.getCommandName();
         if (Commands.CLOSE_COMMAND.equals(commandName)) {
             if (thread != null) {
                 if (isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
-                    closeThread(thread, interaction.getUser().getId());
-                    interaction.createImmediateResponder()
-                            .setContent("Thread closed")
-                            .setFlags(MessageFlag.EPHEMERAL)
-                            .respond();
+                    Thread t = Main.DB.getThread(thread.getId());
+                    if (t != null) {
+                        closeThread(thread, t, interaction.getUser().getId());
+                        interaction.createImmediateResponder()
+                                .setContent("Thread closed")
+                                .setFlags(MessageFlag.EPHEMERAL)
+                                .respond();
+                    } else {
+                        interaction.createImmediateResponder()
+                                .setContent("Can't find thread")
+                                .setFlags(MessageFlag.EPHEMERAL)
+                                .respond();
+                    }
                 }
             }
         } else if (Commands.UNLOCK_COMMAND.equals(commandName)) {

@@ -66,4 +66,8 @@ public class Database {
         threads.findOneAndUpdate(eq("thread", threadId), set("unlocked", true));
     }
 
+    public void setNotifyMessage(long threadId, long notifyMessage) {
+        threads.findOneAndUpdate(eq("thread", threadId), set("notifyMessage", notifyMessage));
+    }
+
 }
