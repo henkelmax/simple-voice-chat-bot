@@ -15,6 +15,8 @@ import org.javacord.api.entity.message.MessageType;
 import org.javacord.api.entity.message.component.*;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.permission.PermissionType;
+import org.javacord.api.entity.server.Server;
+import org.javacord.api.entity.user.User;
 import org.javacord.api.event.interaction.ButtonClickEvent;
 import org.javacord.api.event.interaction.ModalSubmitEvent;
 import org.javacord.api.event.interaction.SelectMenuChooseEvent;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 
 public class SupportThread {
 
+    public static final String BUTTON_GET_SUPPORT = "button_get_support";
     public static final String BUTTON_SUPPORT_KEY = "button_support_key";
     public static final String BUTTON_ABORT_SUPPORT = "button_abort_support";
     public static final String BUTTON_CONFIRM_ANSWERS = "button_confirm_answers";
@@ -50,13 +53,15 @@ public class SupportThread {
     public static final String ISSUE_COMMAND = "issue";
     public static final String CLEANUP_COMMAND = "cleanup";
 
+    private static ServerTextChannel supportChannel;
+
     public static void init() {
         Channel channel = Main.API.getChannelById(Environment.SUPPORT_CHANNEL_ID).orElse(null);
         if (channel == null) {
             throw new IllegalStateException("Can't find support channel!");
         }
 
-        ServerTextChannel supportChannel = channel.asServerTextChannel().orElse(null);
+        supportChannel = channel.asServerTextChannel().orElse(null);
         if (supportChannel == null) {
             throw new IllegalStateException("Support channel is not a text channel");
         }
@@ -64,6 +69,8 @@ public class SupportThread {
         ButtonRegistry.registerButton(BUTTON_SUPPORT_KEY, SupportThread::onSupportKeyButtonPressed);
         ButtonRegistry.registerButton(BUTTON_ABORT_SUPPORT, SupportThread::onAbortSupportButtonPressed);
         ButtonRegistry.registerButton(BUTTON_CONFIRM_ANSWERS, SupportThread::onConfirmAnswersButtonPressed);
+        ButtonRegistry.registerButton(BUTTON_GET_SUPPORT, SupportThread::onGetSupportButtonPressed);
+
         CommandRegistry.registerCommand(CLOSE_COMMAND, "Closes a support thread", SupportThread::onCloseCommand);
         CommandRegistry.registerCommand(UNLOCK_COMMAND, "Unlocks a thread", SupportThread::onUnlockCommand);
         CommandRegistry.registerCommand(ISSUE_COMMAND, "Sends an issue template to a thread",
@@ -76,6 +83,47 @@ public class SupportThread {
                 )),
                 SupportThread::onIssueCommand);
         CommandRegistry.registerCommand(CLEANUP_COMMAND, "Cleans up old threads", SupportThread::onCleanupCommand, PermissionType.ADMINISTRATOR);
+
+        supportChannel.getMessagesAsStream().forEach(message -> {
+            if (message.getAuthor().getId() == Main.API.getClientId()) {
+                message.delete();
+            }
+        });
+
+        supportChannel.sendMessage(new EmbedBuilder()
+                        .setTitle("Support")
+                        .setDescription("""
+                                Please press the `Get Support` button to get support.
+                                You will get asked a couple of questions about your issue and then you'll get help by our staff.
+                                """)
+                        .setColor(Color.GREEN),
+                ActionRow.of(new ButtonBuilder().setCustomId(SupportThread.BUTTON_GET_SUPPORT).setLabel("Get Support").setStyle(ButtonStyle.SUCCESS).build())
+        );
+    }
+
+    private static void onGetSupportButtonPressed(ButtonClickEvent event) {
+        User user = event.getInteraction().getUser();
+        Server server = event.getInteraction().getServer().orElse(null);
+        if (server == null) {
+            return;
+        }
+
+        supportChannel.sendMessage("Support for %s".formatted(user.getName())).thenAccept(message -> {
+            Thread t = SupportThreadUtils.getThread(user.getId());
+            if (t != null) {
+                message.delete();
+                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already have a support thread: <#%s>".formatted(user.getId(), t.getThread())).setFlags(MessageFlag.EPHEMERAL).respond();
+                return;
+            }
+            message.createThread("Support thread for %s".formatted(user.getDisplayName(server)), AutoArchiveDuration.ONE_HOUR).thenAccept(thread -> {
+                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, please follow the steps in your support thread: <#%s>".formatted(user.getId(), thread.getId())).setFlags(MessageFlag.EPHEMERAL).respond();
+                message.delete();
+                thread.addThreadMember(user.getId()).thenAccept(unused -> {
+                    Main.DB.addThread(new Thread(user.getId(), thread.getId()));
+                    onThreadCreated(thread, user);
+                });
+            });
+        });
     }
 
     private static void onCleanupCommand(SlashCommandCreateEvent event) {
@@ -158,8 +206,6 @@ public class SupportThread {
                 .setContent("Thread unlocked")
                 .setFlags(MessageFlag.EPHEMERAL)
                 .respond();
-
-        //TODO send embed that staff joined
     }
 
     private static void onCloseCommand(SlashCommandCreateEvent event) {
@@ -217,42 +263,13 @@ public class SupportThread {
     }
 
     public static void onMessage(MessageCreateEvent event) {
-        if (SupportThreadUtils.isSupportChannel(event.getChannel())) {
-            onSupportChannelMessage(event);
+        ServerThreadChannel channel = SupportThreadUtils.getThread(event.getChannel());
+        if (channel == null) {
             return;
         }
 
-        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getChannel());
-        if (thread != null) {
-            onSupportChannelThreadMessage(thread, event);
-            return;
-        }
-    }
-
-    private static void onSupportChannelMessage(MessageCreateEvent event) {
         MessageAuthor messageAuthor = event.getMessageAuthor();
         if (!messageAuthor.isRegularUser()) {
-            return;
-        }
-        Thread thread = SupportThreadUtils.getThread(messageAuthor.getId());
-        if (thread != null) {
-            event.getMessage().reply("Hey <@%s>, you already have a support thread: <#%s>".formatted(event.getMessageAuthor().getId(), thread.getThread())).thenAccept(message -> {
-                Main.EXECUTOR.schedule(() -> {
-                    event.getMessage().delete();
-                    message.delete();
-                }, 10, TimeUnit.SECONDS);
-            });
-            return;
-        }
-
-        event.getMessage()
-                .createThread("Support thread for %s".formatted(messageAuthor.getDisplayName()), AutoArchiveDuration.ONE_HOUR)
-                .thenAccept(t -> onThreadCreated(t, messageAuthor));
-    }
-
-    private static void onSupportChannelThreadMessage(ServerThreadChannel channel, MessageCreateEvent event) {
-        MessageAuthor messageAuthor = event.getMessageAuthor();
-        if (messageAuthor.isBotUser()) {
             return;
         }
         Thread thread = Main.DB.getThread(channel.getId());
@@ -284,10 +301,7 @@ public class SupportThread {
 
     }
 
-    private static void onThreadCreated(ServerThreadChannel thread, MessageAuthor messageAuthor) {
-        thread.addThreadMember(messageAuthor.getId());
-        Main.DB.addThread(new Thread(messageAuthor.getId(), thread.getId()));
-
+    private static void onThreadCreated(ServerThreadChannel thread, User user) {
         thread.sendMessage(
                 new EmbedBuilder()
                         .setTitle("Support")
