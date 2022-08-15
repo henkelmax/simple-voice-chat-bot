@@ -277,7 +277,9 @@ public class SupportThread {
         Thread thread = Main.DB.getThread(channel.getId());
 
         if (thread == null) {
-            event.getMessage().delete().exceptionally(new ExceptionHandler<>());
+            event.getMessage().delete().thenAccept(unused -> {
+                channel.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update().exceptionally(new ExceptionHandler<>());
+            }).exceptionally(new ExceptionHandler<>());
             return;
         }
 
