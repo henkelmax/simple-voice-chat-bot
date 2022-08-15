@@ -32,6 +32,8 @@ public class NoPermissionsIssue extends BaseIssue {
                                                 
                         If you don't know how to grant permissions for your permissions mod/plugin, please contact their support.
                         We can't help you with the setup of other mods.
+                        
+                        For more information read [this](https://modrepo.de/minecraft/voicechat/wiki?t=permissions).
                         """)
                 .setColor(Color.RED)
         );
