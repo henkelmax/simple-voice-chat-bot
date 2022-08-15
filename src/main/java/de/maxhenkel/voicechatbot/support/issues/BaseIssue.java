@@ -65,7 +65,7 @@ public class BaseIssue implements Issue {
                                                                     
                                 %s
                                                                     
-                                Once you answered every question, confirm them by pressing the `Confirm` button.
+                                **Once you answered every question, confirm them by pressing the `Confirm` button.**
                                 """.formatted(getQuestions().stream().map("⦁ %s"::formatted).collect(Collectors.joining("\n"))))
                         .setColor(Color.BLUE),
                 ActionRow.of(
