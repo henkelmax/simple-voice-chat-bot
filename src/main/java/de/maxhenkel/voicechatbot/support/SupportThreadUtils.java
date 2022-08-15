@@ -2,6 +2,7 @@ package de.maxhenkel.voicechatbot.support;
 
 import de.maxhenkel.voicechatbot.Date;
 import de.maxhenkel.voicechatbot.Environment;
+import de.maxhenkel.voicechatbot.ExceptionHandler;
 import de.maxhenkel.voicechatbot.Main;
 import de.maxhenkel.voicechatbot.db.Thread;
 import org.javacord.api.entity.channel.AutoArchiveDuration;
@@ -121,7 +122,7 @@ public class SupportThreadUtils {
         thread.sendMessage(new EmbedBuilder().setDescription("<@%s> locked this thread.".formatted(locker)).setColor(Color.RED)).thenAccept(message -> {
             Main.DB.removeThread(thread.getId());
             thread.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update();
-        });
+        }).exceptionally(new ExceptionHandler<>());
         updateStaffNotification(t, "Thread locked by <@%s>".formatted(locker));
     }
 
@@ -193,8 +194,8 @@ public class SupportThreadUtils {
             EmbedBuilder embed = embeds.get(0).toBuilder();
             embed.addField("Update %s".formatted(Date.currentDate()), message);
 
-            msg.createUpdater().setEmbed(embed).applyChanges();
-        });
+            msg.createUpdater().setEmbed(embed).applyChanges().exceptionally(new ExceptionHandler<>());
+        }).exceptionally(new ExceptionHandler<>());
     }
 
 }

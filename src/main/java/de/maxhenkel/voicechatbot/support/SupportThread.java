@@ -23,6 +23,7 @@ import org.javacord.api.event.interaction.SelectMenuChooseEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
 import org.javacord.api.interaction.*;
+import org.javacord.api.interaction.callback.InteractionOriginalResponseUpdater;
 
 import java.awt.*;
 import java.time.Instant;
@@ -86,7 +87,7 @@ public class SupportThread {
 
         supportChannel.getMessagesAsStream().forEach(message -> {
             if (message.getAuthor().getId() == Main.API.getClientId()) {
-                message.delete();
+                message.delete().exceptionally(new ExceptionHandler<>());
             }
         });
 
@@ -98,7 +99,7 @@ public class SupportThread {
                                 """)
                         .setColor(Color.GREEN),
                 ActionRow.of(new ButtonBuilder().setCustomId(SupportThread.BUTTON_GET_SUPPORT).setLabel("Get Support").setStyle(ButtonStyle.SUCCESS).build())
-        );
+        ).exceptionally(new ExceptionHandler<>());
     }
 
     private static void onGetSupportButtonPressed(ButtonClickEvent event) {
@@ -111,40 +112,40 @@ public class SupportThread {
         supportChannel.sendMessage("Support for %s".formatted(user.getName())).thenAccept(message -> {
             Thread t = SupportThreadUtils.getThread(user.getId());
             if (t != null) {
-                message.delete();
-                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already have a support thread: <#%s>".formatted(user.getId(), t.getThread())).setFlags(MessageFlag.EPHEMERAL).respond();
+                message.delete().exceptionally(new ExceptionHandler<>());
+                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already have a support thread: <#%s>".formatted(user.getId(), t.getThread())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
                 return;
             }
             message.createThread("Support thread for %s".formatted(user.getDisplayName(server)), AutoArchiveDuration.ONE_HOUR).thenAccept(thread -> {
-                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, please follow the steps in your support thread: <#%s>".formatted(user.getId(), thread.getId())).setFlags(MessageFlag.EPHEMERAL).respond();
+                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, please follow the steps in your support thread: <#%s>".formatted(user.getId(), thread.getId())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
                 message.delete();
                 thread.addThreadMember(user.getId()).thenAccept(unused -> {
                     Main.DB.addThread(new Thread(user.getId(), thread.getId()));
                     onThreadCreated(thread, user);
-                });
-            });
-        });
+                }).exceptionally(new ExceptionHandler<>());
+            }).exceptionally(new ExceptionHandler<>());
+        }).exceptionally(new ExceptionHandler<>());
     }
 
     private static void onCleanupCommand(SlashCommandCreateEvent event) {
         event.getSlashCommandInteraction().respondLater().thenAccept(responseUpdater -> {
-            responseUpdater.setContent("Archiving all threads older than a week...").update();
+            responseUpdater.setContent("Archiving all threads older than a week...").update().exceptionally(new ExceptionHandler<>());
             AtomicInteger removed = new AtomicInteger();
             Main.DB.getThreads(t -> {
                 ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
                 if (thread == null) {
                     Main.DB.removeThread(t.getThread());
-                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update();
+                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
                     return;
                 }
                 if (thread.getArchiveTimestamp().isBefore(Instant.now().minus(7, ChronoUnit.DAYS))) {
                     SupportThreadUtils.closeThread(thread, t, Main.API.getClientId());
                     Main.DB.removeThread(t.getThread());
-                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update();
+                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
                 }
             });
-            responseUpdater.setContent("Finished archiving %s threads.".formatted(removed.get())).update();
-        });
+            responseUpdater.setContent("Finished archiving %s threads.".formatted(removed.get())).update().exceptionally(new ExceptionHandler<>());
+        }).exceptionally(new ExceptionHandler<>());
     }
 
     private static void onIssueCommand(SlashCommandCreateEvent event) {
@@ -176,13 +177,13 @@ public class SupportThread {
                         Please provide additional information, so we can help you.
                         """.formatted(event.getInteraction().getUser().getId(), issue.getName()))
                 .setColor(Color.GREEN)
-        );
+        ).exceptionally(new ExceptionHandler<>());
         issue.onSelectIssue(thread);
         issue.sendQuestions(thread);
         interaction.createImmediateResponder()
                 .setContent(issue.getName())
                 .setFlags(MessageFlag.EPHEMERAL)
-                .respond();
+                .respond().exceptionally(new ExceptionHandler<>());
     }
 
     private static void onUnlockCommand(SlashCommandCreateEvent event) {
@@ -201,18 +202,18 @@ public class SupportThread {
             if (t != null) {
                 SupportThreadUtils.updateStaffNotification(t, "<@%s> unlocked the thread".formatted(event.getInteraction().getUser().getId()));
             }
-        });
+        }).exceptionally(new ExceptionHandler<>());
         interaction.createImmediateResponder()
                 .setContent("Thread unlocked")
                 .setFlags(MessageFlag.EPHEMERAL)
-                .respond();
+                .respond().exceptionally(new ExceptionHandler<>());
     }
 
     private static void onCloseCommand(SlashCommandCreateEvent event) {
         ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         SlashCommandInteraction interaction = event.getSlashCommandInteraction();
         if (thread == null) {
-            interaction.createImmediateResponder().respond();
+            interaction.respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
             return;
         }
         if (!SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
@@ -224,12 +225,14 @@ public class SupportThread {
             interaction.createImmediateResponder()
                     .setContent("Thread closed")
                     .setFlags(MessageFlag.EPHEMERAL)
-                    .respond();
+                    .respond()
+                    .exceptionally(new ExceptionHandler<>());
         } else {
             interaction.createImmediateResponder()
                     .setContent("Can't find thread")
                     .setFlags(MessageFlag.EPHEMERAL)
-                    .respond();
+                    .respond()
+                    .exceptionally(new ExceptionHandler<>());
         }
     }
 
@@ -237,29 +240,29 @@ public class SupportThread {
         Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         if (t == null || thread == null) {
-            event.getInteraction().createImmediateResponder().respond();
+            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
             return;
         }
-        event.getButtonInteraction().createOriginalMessageUpdater().removeAllComponents().update();
+        event.getButtonInteraction().createOriginalMessageUpdater().removeAllComponents().update().exceptionally(new ExceptionHandler<>());
         onConfirmAnswers(thread, t, event);
     }
 
     private static void onAbortSupportButtonPressed(ButtonClickEvent event) {
         SupportThreadUtils.closeThread(SupportThreadUtils.getThread(event.getInteraction()), SupportThreadUtils.getThreadIfOwner(event.getInteraction()), event.getInteraction().getUser().getId());
-        event.getButtonInteraction().createImmediateResponder().respond();
+        event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
     }
 
     private static void onSupportKeyButtonPressed(ButtonClickEvent event) {
         Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         if (t == null) {
-            event.getInteraction().createImmediateResponder().respond();
+            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
             return;
         }
 
         ButtonInteraction buttonInteraction = event.getButtonInteraction();
         buttonInteraction.respondWithModal(MODAL_SUPPORT_KEY, "Support Key",
                 ActionRow.of(TextInput.create(TextInputStyle.SHORT, TEXT_FIELD_SUPPORT_KEY, "Your Support Key"))
-        );
+        ).exceptionally(new ExceptionHandler<>());
     }
 
     public static void onMessage(MessageCreateEvent event) {
@@ -275,27 +278,27 @@ public class SupportThread {
         Thread thread = Main.DB.getThread(channel.getId());
 
         if (thread == null) {
-            event.getMessage().delete();
+            event.getMessage().delete().exceptionally(new ExceptionHandler<>());
             return;
         }
 
         if (thread.isUnlocked()) {
             if (SupportThreadUtils.isStaff(messageAuthor)) {
-                channel.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update();
+                channel.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update().exceptionally(new ExceptionHandler<>());
             }
             return;
         }
 
         if (thread.getUser() != messageAuthor.getId()) {
-            event.getMessage().delete();
+            event.getMessage().delete().exceptionally(new ExceptionHandler<>());
             return;
         }
         event.getMessage().reply("<@%s>, please follow the instructions of the bot to be able to write messages in this thread!".formatted(messageAuthor.getId())).thenAccept(message -> {
             Main.EXECUTOR.schedule(() -> {
-                event.getMessage().delete();
+                event.getMessage().delete().exceptionally(new ExceptionHandler<>());
             }, 3, TimeUnit.SECONDS);
             Main.EXECUTOR.schedule(() -> {
-                message.delete();
+                message.delete().exceptionally(new ExceptionHandler<>());
             }, 10, TimeUnit.SECONDS);
         });
 
@@ -325,7 +328,7 @@ public class SupportThread {
                         new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Get Support!").setStyle(ButtonStyle.PRIMARY).build(),
                         new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("Nevermind...").setStyle(ButtonStyle.DANGER).build()
                 )
-        );
+        ).exceptionally(new ExceptionHandler<>());
     }
 
     private static void onConfirmAnswers(ServerThreadChannel thread, Thread t, ButtonClickEvent event) {
@@ -338,8 +341,8 @@ public class SupportThread {
                                         No messages have been detected.
                                         """)
                                 .setColor(Color.RED)
-                );
-                event.getButtonInteraction().getMessage().toMessageBuilder().send(thread);
+                ).exceptionally(new ExceptionHandler<>());
+                event.getButtonInteraction().getMessage().toMessageBuilder().send(thread).exceptionally(new ExceptionHandler<>());
                 return;
             }
 
@@ -353,10 +356,10 @@ public class SupportThread {
                                     """)
                             .setColor(Color.GREEN),
                     ActionRow.of(SupportThreadUtils.closeThreadButton())
-            );
-            thread.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_DAY).update();
+            ).exceptionally(new ExceptionHandler<>());
+            thread.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_DAY).update().exceptionally(new ExceptionHandler<>());
             SupportThreadUtils.notifyStaff(thread, t);
-        });
+        }).exceptionally(new ExceptionHandler<>());
     }
 
     public static void onModalSubmit(ModalSubmitEvent event) {
@@ -366,7 +369,7 @@ public class SupportThread {
         }
         Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         if (t == null) {
-            event.getInteraction().createImmediateResponder().respond();
+            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
             return;
         }
 
@@ -378,15 +381,15 @@ public class SupportThread {
     }
 
     private static void onSupportKeyProvided(ServerThreadChannel thread, ModalInteraction modalInteraction, String supportKey) {
-        modalInteraction.createImmediateResponder().respond();
+        modalInteraction.respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
         long userId = modalInteraction.getUser().getId();
         if (!SupportKey.verifySupportKey(supportKey)) {
             thread.sendMessage(new EmbedBuilder().setDescription("<@%s> provided an invalid support key: `%s`.".formatted(userId, supportKey)).setColor(Color.RED), ActionRow.of(
                     new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Let me try again").setStyle(ButtonStyle.PRIMARY).build()
-            ));
+            )).exceptionally(new ExceptionHandler<>());
             return;
         }
-        thread.sendMessage(new EmbedBuilder().setDescription("The support key of <@%s> is `%s`.".formatted(userId, supportKey)).setColor(Color.GREEN));
+        thread.sendMessage(new EmbedBuilder().setDescription("The support key of <@%s> is `%s`.".formatted(userId, supportKey)).setColor(Color.GREEN)).exceptionally(new ExceptionHandler<>());
 
         clearAllComponents(thread).thenAccept(messages -> {
             sendSupportTemplateMessage(thread);
@@ -434,7 +437,7 @@ public class SupportThread {
                         .setColor(Color.BLUE),
                 ActionRow.of(selectMenuBuilder.build()),
                 ActionRow.of(SupportThreadUtils.closeThreadButton())
-        );
+        ).exceptionally(new ExceptionHandler<>());
     }
 
     public static void onSelectMenuChoose(SelectMenuChooseEvent event) {
@@ -444,7 +447,7 @@ public class SupportThread {
         }
         Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         if (t == null) {
-            event.getInteraction().createImmediateResponder().respond();
+            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
             return;
         }
 
@@ -473,10 +476,10 @@ public class SupportThread {
                             """)
                     .setColor(Color.GREEN)
 
-            );
+            ).exceptionally(new ExceptionHandler<>());
             issue.onSelectIssue(thread);
             issue.sendQuestions(thread);
-        });
+        }).exceptionally(new ExceptionHandler<>());
     }
 
 }
