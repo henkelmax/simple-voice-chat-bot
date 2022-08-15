@@ -35,6 +35,10 @@ public class NotConnectedIssue extends BaseIssue {
                         ⦁ If you found a guide for your hoster in <#%s>, but it doesn't work, please also contact your hoster first
                                                     
                         **We can't help you with the configuration for specific Minecraft hosters! Please always contact their support first!**
+                        
+                        You should also know that we generally don't support hybrid servers like Mohist or Magma.
+                        
+                        Tools like ngrok also won't work, since they only support TCP.
                         """.formatted(Environment.SERVER_HOSTING_CHANNEL_ID, Environment.SERVER_HOSTING_CHANNEL_ID))
                 .setColor(Color.RED)
         );
