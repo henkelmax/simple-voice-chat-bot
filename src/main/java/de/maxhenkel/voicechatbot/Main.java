@@ -22,6 +22,10 @@ public class Main {
     public static void main(String[] args) {
         LOGGER.info("Starting bot");
 
+        if (!Environment.validate()) {
+            return;
+        }
+
         EXECUTOR = Executors.newSingleThreadScheduledExecutor();
         DB = new Database();
         API = new DiscordApiBuilder().setToken(Environment.TOKEN).setAllIntents().login().join();
