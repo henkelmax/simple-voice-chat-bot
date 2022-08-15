@@ -121,13 +121,35 @@ public class SupportThreadUtils {
         }
         thread.sendMessage(new EmbedBuilder().setDescription("<@%s> locked this thread.".formatted(locker)).setColor(Color.RED)).thenAccept(message -> {
             Main.DB.removeThread(thread.getId());
-            thread.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update();
+            thread.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update().exceptionally(new ExceptionHandler<>());
+            SupportThreadUtils.addNewThreadLog(thread, locker, "Support Thread closed");
         }).exceptionally(new ExceptionHandler<>());
         updateStaffNotification(t, "Thread locked by <@%s>".formatted(locker));
     }
 
     public static Button closeThreadButton() {
         return new ButtonBuilder().setCustomId(SupportThread.BUTTON_ABORT_SUPPORT).setLabel("I don't need help anymore").setStyle(ButtonStyle.DANGER).build();
+    }
+
+    public static void addNewThreadLog(ServerThreadChannel thread, long user, String title) {
+        Channel c = Main.API.getChannelById(Environment.SUPPORT_LOG_CHANNEL).orElse(null);
+        if (c == null) {
+            Main.LOGGER.warn("Failed to find log channel");
+            return;
+        }
+        TextChannel textChannel = c.asTextChannel().orElse(null);
+        if (textChannel == null) {
+            Main.LOGGER.warn("Log channel is not a text channel");
+            return;
+        }
+
+        textChannel.sendMessage(new EmbedBuilder()
+                .setTitle(title)
+                .addField("User", "<@%s>".formatted(user))
+                .addField("Thread", "<#%s>".formatted(thread.getId()))
+                .setTimestampToNow()
+                .setColor(Color.BLUE)
+        ).exceptionally(new ExceptionHandler<>());
     }
 
     public static CompletableFuture<Void> notifyStaff(ServerThreadChannel thread, Thread t) {

@@ -67,10 +67,10 @@ public class SupportThread {
             throw new IllegalStateException("Support channel is not a text channel");
         }
 
+        ButtonRegistry.registerButton(BUTTON_GET_SUPPORT, SupportThread::onGetSupportButtonPressed);
         ButtonRegistry.registerButton(BUTTON_SUPPORT_KEY, SupportThread::onSupportKeyButtonPressed);
         ButtonRegistry.registerButton(BUTTON_ABORT_SUPPORT, SupportThread::onAbortSupportButtonPressed);
         ButtonRegistry.registerButton(BUTTON_CONFIRM_ANSWERS, SupportThread::onConfirmAnswersButtonPressed);
-        ButtonRegistry.registerButton(BUTTON_GET_SUPPORT, SupportThread::onGetSupportButtonPressed);
 
         CommandRegistry.registerCommand(CLOSE_COMMAND, "Closes a support thread", SupportThread::onCloseCommand);
         CommandRegistry.registerCommand(UNLOCK_COMMAND, "Unlocks a thread", SupportThread::onUnlockCommand);
@@ -305,6 +305,7 @@ public class SupportThread {
     }
 
     private static void onThreadCreated(ServerThreadChannel thread, User user) {
+        SupportThreadUtils.addNewThreadLog(thread, user.getId(), "New Support Thread");
         thread.sendMessage(
                 new EmbedBuilder()
                         .setTitle("Support")

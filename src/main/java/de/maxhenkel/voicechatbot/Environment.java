@@ -9,6 +9,7 @@ public class Environment {
     public static final long COMMON_ISSUES_CHANNEL_ID = Long.parseLong(env("COMMON_ISSUES_CHANNEL_ID", "0"));
     public static final long SERVER_HOSTING_CHANNEL_ID = Long.parseLong(env("SERVER_HOSTING_CHANNEL_ID", "0"));
     public static final long SUPPORT_NOTIFICATION_CHANNEL = Long.parseLong(env("SUPPORT_NOTIFICATION_CHANNEL", "0"));
+    public static final long SUPPORT_LOG_CHANNEL = Long.parseLong(env("SUPPORT_LOG_CHANNEL", "0"));
     public static final long SUPPORT_ROLE = Long.parseLong(env("SUPPORT_ROLE", "0"));
 
     public static String env(String envVar, String def) {
