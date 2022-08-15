@@ -37,6 +37,7 @@ public class NotConnectedIssue extends BaseIssue {
                         **We can't help you with the configuration for specific Minecraft hosters! Please always contact their support first!**
                         
                         You should also know that we generally don't support hybrid servers like Mohist or Magma.
+                        Read [this](https://essentialsx.net/do-not-use-mohist.html) for more information.
                         
                         Tools like ngrok also won't work, since they only support TCP.
                         """.formatted(Environment.SERVER_HOSTING_CHANNEL_ID, Environment.SERVER_HOSTING_CHANNEL_ID))
