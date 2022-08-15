@@ -61,6 +61,11 @@ notifying staff that the thread doesn't need looking into again.
 Admins can also clean up the thread database by locking all threads that are older than a week
 by entering the `/cleanup` command.
 
+## Additional Notes
+
+- The bot doesn't keep track of locked threads anymore, so please don't re-open them.
+- Normal users shouldn't have permission to write messages in the support channel.
+
 ## Environment Variables
 
 | Variable                       | Default value     | Description                                          |
