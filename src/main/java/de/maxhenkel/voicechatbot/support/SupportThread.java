@@ -390,13 +390,13 @@ public class SupportThread {
 
         clearAllComponents(thread).thenAccept(messages -> {
             sendSupportTemplateMessage(thread);
-        });
+        }).exceptionally(new ExceptionHandler<>());
     }
 
     private static CompletableFuture<List<Message>> clearAllComponents(ServerThreadChannel thread) {
         List<CompletableFuture<Message>> futures = new ArrayList<>();
         thread.getMessagesAsStream().forEach(message -> {
-            if (message.getType().equals(MessageType.UNKNOWN)) {
+            if (!message.getType().equals(MessageType.NORMAL)) {
                 return;
             }
             if (message.getAuthor().getId() == Main.API.getClientId()) {
