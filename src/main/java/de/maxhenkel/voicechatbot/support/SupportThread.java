@@ -243,7 +243,6 @@ public class SupportThread {
             event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
             return;
         }
-        event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
         onConfirmAnswers(thread, t, event);
     }
 
@@ -347,8 +346,12 @@ public class SupportThread {
                         message.delete().exceptionally(new ExceptionHandler<>());
                     }, 10, TimeUnit.SECONDS);
                 }).exceptionally(new ExceptionHandler<>());
+                event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
                 return;
             }
+            event.getButtonInteraction().getMessage().createUpdater().removeAllComponents().applyChanges().thenAccept(message -> {
+                event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+            }).exceptionally(new ExceptionHandler<>());
 
             thread.sendMessage(
                     new EmbedBuilder()
