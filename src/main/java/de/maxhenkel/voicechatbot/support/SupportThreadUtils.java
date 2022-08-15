@@ -119,7 +119,10 @@ public class SupportThreadUtils {
         if (thread == null || t == null) {
             return;
         }
-        thread.sendMessage(new EmbedBuilder().setDescription("<@%s> locked this thread.".formatted(locker)).setColor(Color.RED)).thenAccept(message -> {
+        thread.sendMessage(new EmbedBuilder().setDescription("""
+                <@%s> locked this thread.
+                You can always open a new one in <#%s> if you need help again.
+                """.formatted(locker, thread.getParent().getId())).setColor(Color.RED)).thenAccept(message -> {
             Main.DB.removeThread(thread.getId());
             thread.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update().exceptionally(new ExceptionHandler<>());
             SupportThreadUtils.addNewThreadLog(thread, locker, "Support Thread closed");
