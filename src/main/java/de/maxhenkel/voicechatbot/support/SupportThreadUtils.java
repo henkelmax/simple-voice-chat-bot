@@ -192,7 +192,7 @@ public class SupportThreadUtils {
                 return;
             }
             EmbedBuilder embed = embeds.get(0).toBuilder();
-            embed.addField("Update %s".formatted(Date.currentDate()), message);
+            embed.addField("Update %s UTC".formatted(Date.currentDate()), message);
 
             msg.createUpdater().setEmbed(embed).applyChanges().exceptionally(new ExceptionHandler<>());
         }).exceptionally(new ExceptionHandler<>());
