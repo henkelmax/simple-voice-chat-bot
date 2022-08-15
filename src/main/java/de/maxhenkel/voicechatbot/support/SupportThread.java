@@ -243,7 +243,7 @@ public class SupportThread {
             event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
             return;
         }
-        event.getButtonInteraction().createOriginalMessageUpdater().removeAllComponents().update().exceptionally(new ExceptionHandler<>());
+        event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
         onConfirmAnswers(thread, t, event);
     }
 
@@ -341,8 +341,11 @@ public class SupportThread {
                                         No messages have been detected.
                                         """)
                                 .setColor(Color.RED)
-                ).exceptionally(new ExceptionHandler<>());
-                event.getButtonInteraction().getMessage().toMessageBuilder().send(thread).exceptionally(new ExceptionHandler<>());
+                ).thenAccept(message -> {
+                    Main.EXECUTOR.schedule(() -> {
+                        message.delete().exceptionally(new ExceptionHandler<>());
+                    }, 10, TimeUnit.SECONDS);
+                }).exceptionally(new ExceptionHandler<>());
                 return;
             }
 
