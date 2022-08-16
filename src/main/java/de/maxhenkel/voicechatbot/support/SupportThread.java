@@ -5,7 +5,6 @@ import de.maxhenkel.voicechatbot.db.Thread;
 import de.maxhenkel.voicechatbot.support.issues.Issue;
 import de.maxhenkel.voicechatbot.support.issues.Issues;
 import org.javacord.api.entity.channel.AutoArchiveDuration;
-import org.javacord.api.entity.channel.Channel;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.ServerThreadChannel;
 import org.javacord.api.entity.message.Message;
@@ -15,7 +14,6 @@ import org.javacord.api.entity.message.MessageType;
 import org.javacord.api.entity.message.component.*;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.interaction.ButtonClickEvent;
 import org.javacord.api.event.interaction.ModalSubmitEvent;
@@ -54,17 +52,10 @@ public class SupportThread {
     public static final String ISSUE_COMMAND = "issue";
     public static final String CLEANUP_COMMAND = "cleanup";
 
-    private static ServerTextChannel supportChannel;
-
     public static void init() {
-        Channel channel = Main.API.getChannelById(Environment.SUPPORT_CHANNEL_ID).orElse(null);
-        if (channel == null) {
-            throw new IllegalStateException("Can't find support channel!");
-        }
-
-        supportChannel = channel.asServerTextChannel().orElse(null);
+        ServerTextChannel supportChannel = SupportThreadUtils.getChannel(Environment.SUPPORT_CHANNEL_ID);
         if (supportChannel == null) {
-            throw new IllegalStateException("Support channel is not a text channel");
+            throw new IllegalStateException("Support channel not found");
         }
 
         ButtonRegistry.registerButton(BUTTON_GET_SUPPORT, SupportThread::onGetSupportButtonPressed);
@@ -103,22 +94,21 @@ public class SupportThread {
     }
 
     private static void onGetSupportButtonPressed(ButtonClickEvent event) {
-        User user = event.getInteraction().getUser();
-        Server server = event.getInteraction().getServer().orElse(null);
-        if (server == null) {
+        ServerTextChannel supportChannel = SupportThreadUtils.getChannel(Environment.SUPPORT_THREAD_CHANNEL_ID);
+        if (supportChannel == null) {
+            Main.LOGGER.error("Support thread channel not found");
             return;
         }
-
-        supportChannel.sendMessage("Support for %s".formatted(user.getName())).thenAccept(message -> {
+        User user = event.getInteraction().getUser();
+        supportChannel.sendMessage("Support for <@%s>".formatted(user.getId())).thenAccept(message -> {
             Thread t = SupportThreadUtils.getThread(user.getId());
             if (t != null) {
                 message.delete().exceptionally(new ExceptionHandler<>());
                 event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already have a support thread: <#%s>".formatted(user.getId(), t.getThread())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
                 return;
             }
-            message.createThread("Support thread for %s".formatted(user.getDisplayName(server)), AutoArchiveDuration.ONE_HOUR).thenAccept(thread -> {
+            message.createThread("Support thread for %s".formatted(user.getName()), AutoArchiveDuration.ONE_HOUR).thenAccept(thread -> {
                 event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, please follow the steps in your support thread: <#%s>".formatted(user.getId(), thread.getId())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
-                message.delete();
                 thread.addThreadMember(user.getId()).thenAccept(unused -> {
                     Main.DB.addThread(new Thread(user.getId(), thread.getId()));
                     onThreadCreated(thread, user);

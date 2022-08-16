@@ -5,10 +5,7 @@ import de.maxhenkel.voicechatbot.Environment;
 import de.maxhenkel.voicechatbot.ExceptionHandler;
 import de.maxhenkel.voicechatbot.Main;
 import de.maxhenkel.voicechatbot.db.Thread;
-import org.javacord.api.entity.channel.AutoArchiveDuration;
-import org.javacord.api.entity.channel.Channel;
-import org.javacord.api.entity.channel.ServerThreadChannel;
-import org.javacord.api.entity.channel.TextChannel;
+import org.javacord.api.entity.channel.*;
 import org.javacord.api.entity.message.MessageAuthor;
 import org.javacord.api.entity.message.component.Button;
 import org.javacord.api.entity.message.component.ButtonBuilder;
@@ -35,8 +32,17 @@ public class SupportThreadUtils {
         return t;
     }
 
-    public static boolean isSupportChannel(Channel channel) {
-        return channel.getId() == Environment.SUPPORT_CHANNEL_ID;
+    public static boolean isSupportThreadChannel(Channel channel) {
+        return channel.getId() == Environment.SUPPORT_THREAD_CHANNEL_ID;
+    }
+
+    @Nullable
+    public static ServerTextChannel getChannel(long id) {
+        Channel channel = Main.API.getChannelById(id).orElse(null);
+        if (channel == null) {
+            return null;
+        }
+        return channel.asServerTextChannel().orElse(null);
     }
 
     @Nullable
@@ -48,7 +54,7 @@ public class SupportThreadUtils {
         if (thread == null) {
             return null;
         }
-        if (!isSupportChannel(thread.getParent())) {
+        if (!isSupportThreadChannel(thread.getParent())) {
             return null;
         }
         return thread;
@@ -82,7 +88,7 @@ public class SupportThreadUtils {
             return null;
         }
 
-        if (!isSupportChannel(threadChannel.getParent())) {
+        if (!isSupportThreadChannel(threadChannel.getParent())) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it was not a child of the support channel", thread.getThread(), thread.getUser());
             return null;
