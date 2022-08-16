@@ -43,6 +43,7 @@ public class Main {
 
         SupportThread.init();
         EmbedCommand.init();
+        ThreadsCommand.init();
         LOGGER.info("Successfully initialized");
     }
 
