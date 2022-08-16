@@ -42,6 +42,7 @@ public class Main {
         API.addSelectMenuChooseListener(SupportThread::onSelectMenuChoose);
 
         SupportThread.init();
+        EmbedCommand.init();
         LOGGER.info("Successfully initialized");
     }
 
