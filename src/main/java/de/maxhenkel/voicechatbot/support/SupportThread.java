@@ -393,6 +393,9 @@ public class SupportThread {
         modalInteraction.respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
         long userId = modalInteraction.getUser().getId();
         if (!SupportKey.verifySupportKey(supportKey)) {
+            if (supportKey.isBlank()) {
+                return;
+            }
             thread.sendMessage(new EmbedBuilder().setDescription("<@%s> provided an invalid support key: `%s`.".formatted(userId, supportKey)).setColor(Color.RED), ActionRow.of(
                     new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Let me try again").setStyle(ButtonStyle.PRIMARY).build()
             )).exceptionally(new ExceptionHandler<>());
