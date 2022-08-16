@@ -19,8 +19,6 @@ public class ThreadsCommand {
         Main.DB.getThreads(t -> {
             ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
             if (thread == null) {
-                Main.DB.removeThread(t.getThread());
-                Main.LOGGER.error("Removed thread '{}' from database as it doesn't exist anymore", t.getThread());
                 return;
             }
             if (t.getNotifyMessage() <= 0L) {
