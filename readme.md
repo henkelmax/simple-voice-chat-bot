@@ -12,10 +12,6 @@ Users can then press the `Get Support` button and the bot will create a thread a
 
 ![](https://user-images.githubusercontent.com/13237524/184628557-c643f63d-f8b8-4ccf-8566-f208e7d331d1.png)
 
-This will create a message in the **log channel** to keep track of all created threads.
-
-![](https://user-images.githubusercontent.com/13237524/184628639-c5156364-889b-4117-870e-d86a0c5189de.png)
-
 In the meantime users get prompted to enter a support key in their support thread.
 
 ![](https://user-images.githubusercontent.com/13237524/184628755-89b4fb1b-35ab-4326-90de-83854a7216da.png)
