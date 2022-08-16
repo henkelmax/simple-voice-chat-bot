@@ -10,7 +10,6 @@ public class Environment {
     public static final long COMMON_ISSUES_CHANNEL_ID = Long.parseLong(env("COMMON_ISSUES_CHANNEL_ID", "0"));
     public static final long SERVER_HOSTING_CHANNEL_ID = Long.parseLong(env("SERVER_HOSTING_CHANNEL_ID", "0"));
     public static final long SUPPORT_NOTIFICATION_CHANNEL = Long.parseLong(env("SUPPORT_NOTIFICATION_CHANNEL", "0"));
-    public static final long SUPPORT_LOG_CHANNEL = Long.parseLong(env("SUPPORT_LOG_CHANNEL", "0"));
     public static final long SUPPORT_ROLE = Long.parseLong(env("SUPPORT_ROLE", "0"));
 
     private static String env(String envVar, String def) {
@@ -41,10 +40,6 @@ public class Environment {
         }
         if (SUPPORT_NOTIFICATION_CHANNEL <= 0L) {
             Main.LOGGER.error("Invalid SUPPORT_NOTIFICATION_CHANNEL environment variable");
-            valid = false;
-        }
-        if (SUPPORT_LOG_CHANNEL <= 0L) {
-            Main.LOGGER.error("Invalid SUPPORT_LOG_CHANNEL environment variable");
             valid = false;
         }
         if (SUPPORT_ROLE <= 0L) {

@@ -296,7 +296,6 @@ public class SupportThread {
     }
 
     private static void onThreadCreated(ServerThreadChannel thread, User user) {
-        SupportThreadUtils.addNewThreadLog(thread, user.getId(), "New Support Thread");
         thread.sendMessage(
                 new EmbedBuilder()
                         .setTitle("Support")
