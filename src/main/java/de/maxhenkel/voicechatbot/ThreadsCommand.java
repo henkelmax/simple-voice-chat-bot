@@ -17,11 +17,11 @@ public class ThreadsCommand {
     private static void onThreadsCommand(SlashCommandCreateEvent event) {
         StringBuilder sb = new StringBuilder();
         Main.DB.getThreads(t -> {
-            ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
-            if (thread == null) {
+            if (t.getNotifyMessage() <= 0L) {
                 return;
             }
-            if (t.getNotifyMessage() <= 0L) {
+            ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
+            if (thread == null) {
                 return;
             }
             sb.append("<#%s>".formatted(thread.getId()));
