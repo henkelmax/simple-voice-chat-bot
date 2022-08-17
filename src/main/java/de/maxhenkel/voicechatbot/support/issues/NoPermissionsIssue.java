@@ -15,6 +15,7 @@ public class NoPermissionsIssue extends BaseIssue {
     @Override
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
+        questions.add("What server software are you using? *(Fabric/Forge/Bukkit/Spigot/Paper etc)*");
         questions.add("Are you using any permission manager mod/plugin? *(LuckPerms/PermissionsEx etc)*");
         return questions;
     }
@@ -34,6 +35,9 @@ public class NoPermissionsIssue extends BaseIssue {
                         We can't help you with the setup of other mods.
                         
                         For more information read [this](https://modrepo.de/minecraft/voicechat/wiki?t=permissions).
+                        
+                        You should also know that we generally don't support hybrid servers like Mohist or Magma.
+                        Read [this](https://essentialsx.net/do-not-use-mohist.html) for more information.
                         """)
                 .setColor(Color.RED)
         );
