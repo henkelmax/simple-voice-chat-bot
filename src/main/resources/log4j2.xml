@@ -4,7 +4,7 @@
         <Console name="LogToConsole" target="SYSTEM_OUT">
             <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss}][%level][%c{1}]: %msg%n"/>
         </Console>
-        <RollingRandomAccessFile name="LogToRollingFile" fileName="logs/bot.log" filePattern="logs/bot-%d{MM-dd-yyyy}-%i.log">
+        <RollingRandomAccessFile name="LogToRollingFile" fileName="logs/bot.log" filePattern="logs/bot-%d{yyyy-MM-dd}-%i.log">
             <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss}][%level][%c{1}]: %msg%n"/>
             <Policies>
                 <TimeBasedTriggeringPolicy/>
