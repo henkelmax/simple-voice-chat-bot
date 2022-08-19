@@ -8,7 +8,7 @@ import java.awt.*;
 public class ConfigIssue extends BaseIssue {
 
     public ConfigIssue() {
-        super("issue_config", "Config file issues");
+        super("issue_config", "Can't find the config file");
     }
 
     @Override
