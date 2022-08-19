@@ -13,6 +13,7 @@ public class Issues {
                 new MicNotWorkingIssue(),
                 new ConfigIssue(),
                 new NoPermissionsIssue(),
+                new PortInUseIssue(),
                 new OtherIssue(),
                 new CrashIssue(),
                 new QuestionIssue()
