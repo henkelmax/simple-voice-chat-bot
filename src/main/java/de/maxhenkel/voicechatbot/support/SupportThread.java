@@ -305,6 +305,7 @@ public class SupportThread {
                                 If this is the case, please generate a support key on the right hand panel in the wiki.
                                 After clicking the `Get Support!` button below this message you will be asked to enter the support key.
                                 """)
+                        .addField("Important", "*By clicking the get support button, you agree that any logs you upload here will be uploaded to [mclo.gs](https://mclo.gs)!*")
                         .addField("Useful Links",
                                 String.join(" | ",
                                         "[Mod Description](https://modrepo.de/minecraft/voicechat)",

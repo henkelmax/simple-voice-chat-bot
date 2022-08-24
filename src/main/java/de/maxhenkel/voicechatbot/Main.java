@@ -40,6 +40,7 @@ public class Main {
         API.addMessageCreateListener(SupportThread::onMessage);
         API.addModalSubmitListener(SupportThread::onModalSubmit);
         API.addSelectMenuChooseListener(SupportThread::onSelectMenuChoose);
+        API.addMessageCreateListener(LogUploader::onMessage);
 
         SupportThread.init();
         EmbedCommand.init();
