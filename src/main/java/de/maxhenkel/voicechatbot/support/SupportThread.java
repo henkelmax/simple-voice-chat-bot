@@ -380,17 +380,17 @@ public class SupportThread {
     }
 
     private static void onSupportKeyProvided(ServerThreadChannel thread, ModalInteraction modalInteraction, String supportKey) {
-        modalInteraction.respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
         long userId = modalInteraction.getUser().getId();
         if (!SupportKey.verifySupportKey(supportKey)) {
-            if (supportKey.isBlank()) {
-                return;
-            }
-            thread.sendMessage(new EmbedBuilder().setDescription("<@%s> provided an invalid support key: `%s`.".formatted(userId, supportKey)).setColor(Color.RED), ActionRow.of(
-                    new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Let me try again").setStyle(ButtonStyle.PRIMARY).build()
-            )).exceptionally(new ExceptionHandler<>());
+            modalInteraction.
+                    createImmediateResponder()
+                    .setContent("Invalid support key!")
+                    .setFlags(MessageFlag.EPHEMERAL)
+                    .respond()
+                    .exceptionally(new ExceptionHandler<>());
             return;
         }
+        modalInteraction.respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
         thread.sendMessage(new EmbedBuilder().setDescription("The support key of <@%s> is `%s`.".formatted(userId, supportKey)).setColor(Color.GREEN)).exceptionally(new ExceptionHandler<>());
 
         clearAllComponents(thread).thenAccept(messages -> {
