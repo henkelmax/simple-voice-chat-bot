@@ -2,6 +2,7 @@ package de.maxhenkel.voicechatbot;
 
 import de.maxhenkel.voicechatbot.db.Database;
 import de.maxhenkel.voicechatbot.support.SupportThread;
+import de.maxhenkel.voicechatbot.support.ThreadCooldown;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
@@ -10,6 +11,7 @@ import org.javacord.api.entity.activity.ActivityType;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
 
@@ -45,6 +47,9 @@ public class Main {
         SupportThread.init();
         EmbedCommand.init();
         ThreadsCommand.init();
+
+        EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
+
         LOGGER.info("Successfully initialized");
     }
 

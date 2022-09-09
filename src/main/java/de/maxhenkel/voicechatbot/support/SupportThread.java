@@ -100,17 +100,21 @@ public class SupportThread {
             return;
         }
         User user = event.getInteraction().getUser();
+        Thread t = SupportThreadUtils.getThread(user.getId());
+        if (t != null) {
+            event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already have a support thread: <#%s>".formatted(user.getId(), t.getThread())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
+            return;
+        }
+        if (ThreadCooldown.isOnCooldown(user.getId())) {
+            event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already recently opened a support thread. Please wait a while to create a new one.".formatted(user.getId())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
+            return;
+        }
         supportChannel.sendMessage("Support for <@%s>".formatted(user.getId())).thenAccept(message -> {
-            Thread t = SupportThreadUtils.getThread(user.getId());
-            if (t != null) {
-                message.delete().exceptionally(new ExceptionHandler<>());
-                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already have a support thread: <#%s>".formatted(user.getId(), t.getThread())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
-                return;
-            }
             message.createThread("Support thread for %s".formatted(user.getName()), AutoArchiveDuration.ONE_HOUR).thenAccept(thread -> {
                 event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, please follow the steps in your support thread: <#%s>".formatted(user.getId(), thread.getId())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
                 thread.addThreadMember(user.getId()).thenAccept(unused -> {
                     Main.DB.addThread(new Thread(user.getId(), thread.getId()));
+                    ThreadCooldown.setCooldown(user.getId());
                     onThreadCreated(thread, user);
                 }).exceptionally(new ExceptionHandler<>());
             }).exceptionally(new ExceptionHandler<>());
