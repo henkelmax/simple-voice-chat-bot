@@ -132,11 +132,13 @@ public class SupportThread {
                     responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
                     return;
                 }
-                if (thread.getArchiveTimestamp().isBefore(Instant.now().minus(7, ChronoUnit.DAYS))) {
-                    SupportThreadUtils.closeThread(thread, t, Main.API.getClientId());
-                    Main.DB.removeThread(t.getThread());
-                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
-                }
+                thread.getMessages(1).thenAccept(messages -> {
+                    if (messages.isEmpty() || messages.first().getCreationTimestamp().isBefore(Instant.now().minus(7, ChronoUnit.DAYS))) {
+                        SupportThreadUtils.closeThread(thread, t, Main.API.getClientId());
+                        Main.DB.removeThread(t.getThread());
+                        responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
+                    }
+                }).exceptionally(new ExceptionHandler<>());
             });
             responseUpdater.setContent("Finished archiving %s threads.".formatted(removed.get())).update().exceptionally(new ExceptionHandler<>());
         }).exceptionally(new ExceptionHandler<>());
