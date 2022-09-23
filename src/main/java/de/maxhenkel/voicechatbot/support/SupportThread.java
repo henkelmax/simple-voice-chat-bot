@@ -165,6 +165,7 @@ public class SupportThread {
         if (issue == null) {
             return;
         }
+        thread.addThreadMember(event.getInteraction().getUser());
         thread.sendMessage(new EmbedBuilder()
                 .setTitle("Issue type changed")
                 .setDescription("""
