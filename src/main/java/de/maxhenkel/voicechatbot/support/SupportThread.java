@@ -140,7 +140,9 @@ public class SupportThread {
                     }
                 }).exceptionally(new ExceptionHandler<>());
             });
-            responseUpdater.setContent("Finished archiving %s threads.".formatted(removed.get())).update().exceptionally(new ExceptionHandler<>());
+            Main.EXECUTOR.schedule(() -> {
+                responseUpdater.setContent("Finished archiving %s threads.".formatted(removed.get())).update().exceptionally(new ExceptionHandler<>());
+            }, 5, TimeUnit.SECONDS);
         }).exceptionally(new ExceptionHandler<>());
     }
 
