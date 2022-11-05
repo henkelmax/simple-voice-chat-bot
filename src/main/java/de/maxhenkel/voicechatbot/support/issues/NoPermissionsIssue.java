@@ -27,7 +27,8 @@ public class NoPermissionsIssue extends BaseIssue {
                 .setDescription("""
                         Please make sure you granted the following permissions for every player:
                                                     
-                        ⦁ `voicechat.connect`
+                        ⦁ ~~`voicechat.connect`~~ *Removed in version 2.3.13*
+                        ⦁ `voicechat.listen` *Added in version 2.3.13*
                         ⦁ `voicechat.speak`
                         ⦁ `voicechat.groups`
                                                 
