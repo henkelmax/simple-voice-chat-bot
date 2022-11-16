@@ -47,6 +47,7 @@ public class Main {
         SupportThread.init();
         EmbedCommand.init();
         ThreadsCommand.init();
+        SupportCommand.init();
 
         EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
 
