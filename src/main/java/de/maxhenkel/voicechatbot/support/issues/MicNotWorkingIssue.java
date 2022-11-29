@@ -15,8 +15,8 @@ public class MicNotWorkingIssue extends BaseIssue {
     @Override
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
-        questions.add("Operating system are you using? *(Windows/MacOS/Linux)*");
-        questions.add("Operating system version are you on? (MacOS 10.15/Windows 10 etc)");
+        questions.add("Which operating system are you using? *(Windows/MacOS/Linux)*");
+        questions.add("Which operating system version are you using? (MacOS 10.15/Windows 10 etc)");
         return questions;
     }
 
@@ -25,11 +25,8 @@ public class MicNotWorkingIssue extends BaseIssue {
         textChannel.sendMessage(new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
-                        If you are on **MacOS**, you need to patch your launcher in order to get your microphone working!
-                                                    
-                        ⦁ If you don't know how to patch your launcher, read [this](https://github.com/henkelmax/simple-voice-chat/tree/1.19.2/macos)
-                        ⦁ If there is no patcher popping up when launching your game, download the [standalone patcher](https://github.com/henkelmax/simple-voice-chat/tree/1.19.2/macos#standalone-version)
-                                                    
+                        If you are on **MacOS**, you need to use [Prism Launcher](https://prismlauncher.org/) to get access to your microphone!
+                        For more information read [this](https://modrepo.de/minecraft/voicechat/wiki?t=macos_microphone_permission).
                         """)
                 .setColor(Color.RED)
         );
