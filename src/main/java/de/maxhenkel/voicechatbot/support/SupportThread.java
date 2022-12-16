@@ -311,13 +311,13 @@ public class SupportThread {
                         .setDescription("""
                                 **To get support you must first read the [wiki](https://modrepo.de/minecraft/voicechat/wiki).**
                                 Please make sure that you have read everything thoroughly and that your problem is certainly not covered there.
-                                If this is the case, please generate a support key on the right hand panel in the wiki.
+                                If this is the case, please generate a support key [here](https://modrepo.de/minecraft/voicechat/wiki/support).
                                 After clicking the `Get Support!` button below this message you will be asked to enter the support key.
                                 """)
                         .addField("Important", "*By clicking the get support button, you agree that any logs you upload here will be uploaded to [mclo.gs](https://mclo.gs)!*")
                         .addField("Useful Links",
                                 String.join(" | ",
-                                        "[Mod Description](https://modrepo.de/minecraft/voicechat)",
+                                        "[Mod Description](https://modrinth.com/mod/simple-voice-chat)",
                                         "[FAQ](https://modrepo.de/minecraft/voicechat/faq)",
                                         "[Wiki](https://modrepo.de/minecraft/voicechat/wiki)",
                                         "[Mod Downloads](https://www.curseforge.com/minecraft/mc-mods/simple-voice-chat/files/all)",
