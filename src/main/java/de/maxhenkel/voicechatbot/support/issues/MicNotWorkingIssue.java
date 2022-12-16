@@ -26,7 +26,7 @@ public class MicNotWorkingIssue extends BaseIssue {
                 .setTitle("Disclaimer")
                 .setDescription("""
                         If you are on **MacOS**, you need to use [Prism Launcher](https://prismlauncher.org/) to get access to your microphone!
-                        For more information read [this](https://modrepo.de/minecraft/voicechat/wiki?t=macos_microphone_permission).
+                        For more information read [this](https://modrepo.de/minecraft/voicechat/wiki/macos).
                         """)
                 .setColor(Color.RED)
         );

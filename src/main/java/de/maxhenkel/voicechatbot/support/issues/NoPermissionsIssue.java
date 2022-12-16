@@ -35,7 +35,7 @@ public class NoPermissionsIssue extends BaseIssue {
                         If you don't know how to grant permissions for your permissions mod/plugin, please contact their support.
                         We can't help you with the setup of other mods.
                         
-                        For more information read [this](https://modrepo.de/minecraft/voicechat/wiki?t=permissions).
+                        For more information read [this](https://modrepo.de/minecraft/voicechat/wiki/permissions).
                         
                         You should also know that we generally don't support hybrid servers like Mohist or Magma.
                         Read [this](https://essentialsx.net/do-not-use-mohist.html) for more information.
