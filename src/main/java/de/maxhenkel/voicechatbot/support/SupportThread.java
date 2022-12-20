@@ -309,7 +309,7 @@ public class SupportThread {
                 new EmbedBuilder()
                         .setTitle("Support")
                         .setDescription("""
-                                **To get support you must first read the [wiki](https://modrepo.de/minecraft/voicechat/wiki).**
+                                **To get support you must first read the [wiki](https://modrepo.de/minecraft/voicechat/wiki) and the [FAQ](https://modrepo.de/minecraft/voicechat/faq).**
                                 Please make sure that you have read everything thoroughly and that your problem is certainly not covered there.
                                 If this is the case, please generate a support key [here](https://modrepo.de/minecraft/voicechat/wiki/support).
                                 After clicking the `Get Support!` button below this message you will be asked to enter the support key.
