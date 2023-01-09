@@ -320,8 +320,7 @@ public class SupportThread {
                                         "[Mod Description](https://modrinth.com/mod/simple-voice-chat)",
                                         "[FAQ](https://modrepo.de/minecraft/voicechat/faq)",
                                         "[Wiki](https://modrepo.de/minecraft/voicechat/wiki)",
-                                        "[Mod Downloads](https://www.curseforge.com/minecraft/mc-mods/simple-voice-chat/files/all)",
-                                        "[Plugin Downloads](https://www.curseforge.com/minecraft/bukkit-plugins/simple-voice-chat/files/all)"
+                                        "[Downloads](https://modrinth.com/mod/simple-voice-chat/versions)"
                                 )
                         )
                         .setColor(Color.BLUE),
