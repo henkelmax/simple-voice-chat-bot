@@ -19,10 +19,10 @@ public class ConfigIssue extends BaseIssue {
                         While editing configuration files, make sure the client/server is stopped.
                         If the config values keep resetting, this is most likely the problem.
                         If you can't find the config files, make sure the client/server was started at least once, so that the files are generated.
+                        
+                        If you are using an older version of the mod (older than 2.4.0) read [this](https://modrepo.de/minecraft/voicechat/wiki/old_configuration).
                         """)
-                .addField("Fabric/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`")
-                .addField("Forge 1.15+ config location", "*Server*:\n`<Your world folder>/serverconfig/voicechat-server.toml`\n*Client*:\n`config/voicechat-client.toml`")
-                .addField("Forge 1.12.2 config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`")
+                .addField("Fabric/Forge/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`")
                 .addField("Bukkit/Spigot/Paper config location", "`plugins/voicechat/voicechat-server.properties`")
                 .setColor(Color.RED)
         );
