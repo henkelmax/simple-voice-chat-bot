@@ -8,10 +8,7 @@ import org.javacord.api.interaction.SlashCommandOption;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CommandRegistry {
 
@@ -69,7 +66,7 @@ public class CommandRegistry {
         Main.LOGGER.info("Looking for server slash commands");
         Collection<Server> servers = Main.API.getServers();
         for (Server server : servers) {
-            List<SlashCommand> commands = Main.API.getServerSlashCommands(server).join();
+            Set<SlashCommand> commands = Main.API.getServerSlashCommands(server).join();
             for (SlashCommand command : commands) {
                 command.deleteForServer(server).join();
                 Main.LOGGER.info("Deleted command '{}' in server {}", command.getName(), server.getName());
@@ -77,7 +74,7 @@ public class CommandRegistry {
         }
 
         Main.LOGGER.info("Looking for global slash commands");
-        List<SlashCommand> commands = Main.API.getGlobalSlashCommands().join();
+        Set<SlashCommand> commands = Main.API.getGlobalSlashCommands().join();
         for (SlashCommand command : commands) {
             command.deleteGlobal().join();
             Main.LOGGER.info("Deleted command '{}'", command.getName());

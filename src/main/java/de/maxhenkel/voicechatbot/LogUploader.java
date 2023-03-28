@@ -55,7 +55,7 @@ public class LogUploader {
             String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
 
             if (Arrays.stream(LOG_FILE_FORMATS).anyMatch(s -> s.equalsIgnoreCase(extension))) {
-                attachment.downloadAsByteArray().thenAccept(bytes -> {
+                attachment.asByteArray().thenAccept(bytes -> {
                     onLog(attachment, bytes, fileName, extension);
                 });
 

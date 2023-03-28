@@ -94,7 +94,7 @@ public class SupportThreadUtils {
             return null;
         }
 
-        if (threadChannel.isLocked()) {
+        if (threadChannel.getMetadata().isLocked()) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it was locked", thread.getThread(), thread.getUser());
             return null;

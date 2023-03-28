@@ -426,8 +426,7 @@ public class SupportThread {
     }
 
     private static void sendSupportTemplateMessage(ServerThreadChannel thread) {
-        SelectMenuBuilder selectMenuBuilder = new SelectMenuBuilder()
-                .setCustomId(SELECT_MENU_ISSUE)
+        SelectMenuBuilder selectMenuBuilder = new SelectMenuBuilder(ComponentType.SELECT_MENU_STRING, SELECT_MENU_ISSUE)
                 .setMinimumValues(1)
                 .setMaximumValues(1)
                 .setPlaceholder("Select issue");
