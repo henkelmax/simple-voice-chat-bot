@@ -30,9 +30,9 @@ public class NotConnectedIssue extends BaseIssue {
                 .setDescription("""
                         If you are hosting your server with a Minecraft hosting provider, please do the following:
                                                     
-                        ⦁ Go to <#%s> and look if a guide for your hoster exists
+                        ⦁ Go to [this page](https://modrepo.de/minecraft/voicechat/wiki/server_setup_mc_hosting) and look if a guide for your hoster exists
                         ⦁ If there is no guide for your hoster, please **contact the support of your hoster**
-                        ⦁ If you found a guide for your hoster in <#%s>, but it doesn't work, please also contact your hoster first
+                        ⦁ If you found a guide for your hoster but it doesn't work, please also contact your hoster first
                                                     
                         **We can't help you with the configuration for specific Minecraft hosters! Please always contact their support first!**
                         
@@ -40,7 +40,7 @@ public class NotConnectedIssue extends BaseIssue {
                         Read [this](https://essentialsx.net/do-not-use-mohist.html) for more information.
                         
                         Tools like ngrok also won't work, since they only support TCP.
-                        """.formatted(Environment.SERVER_HOSTING_CHANNEL_ID, Environment.SERVER_HOSTING_CHANNEL_ID))
+                        """)
                 .setColor(Color.RED)
         );
     }

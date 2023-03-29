@@ -438,11 +438,7 @@ public class SupportThread {
         thread.sendMessage(
                 new EmbedBuilder()
                         .setTitle("Select your issue")
-                        .setDescription("""
-                                Please select your issue from the menu below.
-                                                                
-                                Alternatively you can take a look at <#%s>.
-                                """.formatted(Environment.COMMON_ISSUES_CHANNEL_ID))
+                        .setDescription("Please select your issue from the menu below.")
                         .setColor(Color.BLUE),
                 ActionRow.of(selectMenuBuilder.build()),
                 ActionRow.of(SupportThreadUtils.closeThreadButton())
