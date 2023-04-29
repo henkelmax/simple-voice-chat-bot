@@ -1,9 +1,9 @@
 package de.maxhenkel.voicechatbot.db;
 
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
+import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import de.maxhenkel.voicechatbot.Environment;
@@ -24,8 +24,11 @@ public class Database {
 
     public Database() {
         CodecRegistry registry = CodecRegistries.fromRegistries(CodecRegistries.fromCodecs(new Thread.ThreadCodec()), MongoClientSettings.getDefaultCodecRegistry());
-        MongoClientOptions options = MongoClientOptions.builder().codecRegistry(registry).build();
-        mongoClient = new MongoClient(new ServerAddress(Environment.DATABASE_URL), options);
+        MongoClientSettings settings = MongoClientSettings.builder()
+                .applyConnectionString(new ConnectionString("mongodb://%s".formatted(Environment.DATABASE_URL)))
+                .codecRegistry(registry)
+                .build();
+        mongoClient = MongoClients.create(settings);
         database = mongoClient.getDatabase(Environment.DATABASE_NAME);
         threads = database.getCollection("threads", Thread.class);
     }
