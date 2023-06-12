@@ -11,14 +11,16 @@ import org.javacord.api.event.message.MessageCreateEvent;
 import java.awt.*;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class PingWatcher {
 
+    private static final Pattern MENTION_REGEX = Pattern.compile("<@(\\d+)>");
     private static final Set<Long> MODERATORS = new HashSet<>();
+    private static final Set<Long> WARNED_USERS = new HashSet<>();
 
     public static void init(DiscordApi api) {
         api.getServers().forEach(PingWatcher::initServer);
@@ -52,6 +54,26 @@ public class PingWatcher {
         if (mentionedUsers.stream().noneMatch(PingWatcher::isModerator)) {
             return;
         }
+
+        String message = event.getMessage().getContent();
+
+        Matcher matcher = MENTION_REGEX.matcher(message);
+
+        List<User> pingedUsers = new ArrayList<>();
+        while (matcher.find()) {
+            String id = matcher.group(1);
+            server.getMemberById(id).ifPresent(pingedUsers::add);
+        }
+
+        if (!WARNED_USERS.contains(user.getId()) && pingedUsers.stream().noneMatch(PingWatcher::isModerator)) {
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.setDescription("<@%s>!\nPlease disable pings when replying to admins or moderators!".formatted(user.getId()));
+            builder.setColor(Color.ORANGE);
+            event.getMessage().reply(builder);
+            WARNED_USERS.add(user.getId());
+            return;
+        }
+
         EmbedBuilder builder = new EmbedBuilder();
         builder.setDescription("<@%s>!\nDon't ping admins or moderators!".formatted(user.getId()));
         builder.setColor(Color.RED);
