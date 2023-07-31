@@ -20,7 +20,7 @@ public class PingWatcher {
 
     private static final Pattern MENTION_REGEX = Pattern.compile("<@(\\d+)>");
     private static final Set<Long> MODERATORS = new HashSet<>();
-    private static final Set<Long> WARNED_USERS = new HashSet<>();
+    private static final Map<Long, Integer> WARNED_USERS = new HashMap<>();
 
     public static void init(DiscordApi api) {
         api.getServers().forEach(PingWatcher::initServer);
@@ -65,12 +65,14 @@ public class PingWatcher {
             server.getMemberById(id).ifPresent(pingedUsers::add);
         }
 
-        if (!WARNED_USERS.contains(user.getId()) && pingedUsers.stream().noneMatch(PingWatcher::isModerator)) {
+        int warningAmount = WARNED_USERS.getOrDefault(user.getId(), 0) + 1;
+        WARNED_USERS.put(user.getId(), warningAmount);
+
+        if (warningAmount <= 3 && pingedUsers.stream().noneMatch(PingWatcher::isModerator)) {
             EmbedBuilder builder = new EmbedBuilder();
             builder.setDescription("<@%s>!\nPlease disable pings when replying to admins or moderators!".formatted(user.getId()));
             builder.setColor(Color.ORANGE);
             event.getMessage().reply(builder);
-            WARNED_USERS.add(user.getId());
             return;
         }
 
