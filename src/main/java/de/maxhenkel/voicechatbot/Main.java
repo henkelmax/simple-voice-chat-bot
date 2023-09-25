@@ -43,7 +43,10 @@ public class Main {
         API.addModalSubmitListener(SupportThread::onModalSubmit);
         API.addSelectMenuChooseListener(SupportThread::onSelectMenuChoose);
         API.addMessageCreateListener(LogUploader::onMessage);
-        API.addMessageCreateListener(PingWatcher::onMessage);
+        if (Environment.NO_PING_ROLE > 0L) {
+            API.addMessageCreateListener(PingWatcher::onMessage);
+            PingWatcher.init(API);
+        }
 
         SupportThread.init();
         EmbedCommand.init();
@@ -51,7 +54,6 @@ public class Main {
         SupportCommand.init();
         QuestionCommand.init();
         LogsCommand.init();
-        PingWatcher.init(API);
 
         EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
 

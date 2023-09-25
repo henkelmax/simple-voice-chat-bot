@@ -8,6 +8,7 @@ import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
 
+import javax.annotation.Nullable;
 import java.awt.*;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -23,6 +24,9 @@ public class PingWatcher {
     private static final Map<Long, Integer> WARNED_USERS = new HashMap<>();
 
     public static void init(DiscordApi api) {
+        if (Environment.NO_PING_ROLE <= 0L) {
+            return;
+        }
         api.getServers().forEach(PingWatcher::initServer);
     }
 
@@ -51,7 +55,7 @@ public class PingWatcher {
         }
         List<User> mentionedUsers = event.getMessage().getMentionedUsers();
 
-        if (mentionedUsers.stream().noneMatch(PingWatcher::isModerator)) {
+        if (mentionedUsers.stream().noneMatch(user1 -> isNoPing(user1, server))) {
             return;
         }
 
@@ -68,7 +72,7 @@ public class PingWatcher {
         int warningAmount = WARNED_USERS.getOrDefault(user.getId(), 0) + 1;
         WARNED_USERS.put(user.getId(), warningAmount);
 
-        if (warningAmount <= 3 && pingedUsers.stream().noneMatch(PingWatcher::isModerator)) {
+        if (warningAmount <= 3 && pingedUsers.stream().noneMatch(user1 -> isNoPing(user1, server))) {
             EmbedBuilder builder = new EmbedBuilder();
             builder.setDescription("<@%s>!\nPlease disable pings when replying to admins or moderators!".formatted(user.getId()));
             builder.setColor(Color.ORANGE);
@@ -86,6 +90,13 @@ public class PingWatcher {
 
     private static boolean isModerator(User user) {
         return MODERATORS.contains(user.getId());
+    }
+
+    private static boolean isNoPing(User user, @Nullable Server server) {
+        if (server == null) {
+            return false;
+        }
+        return user.getRoles(server).stream().anyMatch(role -> role.getId() == Environment.NO_PING_ROLE);
     }
 
 }

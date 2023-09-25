@@ -9,6 +9,7 @@ public class Environment {
     public static final long SUPPORT_THREAD_CHANNEL_ID = Long.parseLong(env("SUPPORT_THREAD_CHANNEL_ID", "0"));
     public static final long SUPPORT_NOTIFICATION_CHANNEL = Long.parseLong(env("SUPPORT_NOTIFICATION_CHANNEL", "0"));
     public static final long SUPPORT_ROLE = Long.parseLong(env("SUPPORT_ROLE", "0"));
+    public static final long NO_PING_ROLE = Long.parseLong(env("NO_PING_ROLE", "0"));
 
     private static String env(String envVar, String def) {
         String var = System.getenv(envVar);
