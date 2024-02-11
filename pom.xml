@@ -6,7 +6,7 @@
 
     <groupId>de.maxhenkel</groupId>
     <artifactId>simple-voice-chat-bot</artifactId>
-    <version>1.1.4</version>
+    <version>1.1.5</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -44,6 +44,11 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-buffer</artifactId>
+            <version>4.1.106.Final</version>
         </dependency>
     </dependencies>
 

@@ -10,6 +10,9 @@ public class Environment {
     public static final long SUPPORT_NOTIFICATION_CHANNEL = Long.parseLong(env("SUPPORT_NOTIFICATION_CHANNEL", "0"));
     public static final long SUPPORT_ROLE = Long.parseLong(env("SUPPORT_ROLE", "0"));
     public static final long NO_PING_ROLE = Long.parseLong(env("NO_PING_ROLE", "0"));
+    public static final int DEFAULT_VOICE_CHAT_PORT = Integer.parseInt(env("DEFAULT_VOICE_CHAT_PORT", "24454"));
+    public static final int PORT_CHECKER_ATTEMPTS = Integer.parseInt(env("PORT_CHECKER_ATTEMPTS", "10"));
+    public static final int PORT_CHECKER_TIMEOUT = Integer.parseInt(env("PORT_CHECKER_TIMEOUT", "1000"));
 
     private static String env(String envVar, String def) {
         String var = System.getenv(envVar);

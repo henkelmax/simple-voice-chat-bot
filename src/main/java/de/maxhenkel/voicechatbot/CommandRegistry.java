@@ -17,7 +17,7 @@ public class CommandRegistry {
     public static void init() {
         Main.LOGGER.info("Initializing command registry");
 
-        clearCommands();
+//        clearCommands();
 
         Main.API.addSlashCommandCreateListener(commandCreateEvent -> {
             String commandString = commandCreateEvent.getSlashCommandInteraction().getCommandName();
@@ -42,9 +42,9 @@ public class CommandRegistry {
             builder = SlashCommand.with(command, description);
         }
 
-        builder.setDefaultEnabledForPermissions(permissions)
-                .createGlobal(Main.API)
-                .join();
+//        builder.setDefaultEnabledForPermissions(permissions)
+//                .createGlobal(Main.API)
+//                .join();
 
         commands.put(command, new Command(command, listener));
         Main.LOGGER.info("Added command '{}'", command);

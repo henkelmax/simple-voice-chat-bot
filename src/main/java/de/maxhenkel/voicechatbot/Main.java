@@ -1,6 +1,7 @@
 package de.maxhenkel.voicechatbot;
 
 import de.maxhenkel.voicechatbot.db.Database;
+import de.maxhenkel.voicechatbot.portchecker.PortCheckerCommand;
 import de.maxhenkel.voicechatbot.support.SupportThread;
 import de.maxhenkel.voicechatbot.support.ThreadCooldown;
 import org.apache.logging.log4j.LogManager;
@@ -54,6 +55,7 @@ public class Main {
         SupportCommand.init();
         QuestionCommand.init();
         LogsCommand.init();
+        PortCheckerCommand.init();
 
         EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
 
