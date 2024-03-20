@@ -123,7 +123,7 @@ public class SupportThread {
 
     private static void onCleanupCommand(SlashCommandCreateEvent event) {
         event.getSlashCommandInteraction().respondLater().thenAccept(responseUpdater -> {
-            responseUpdater.setContent("Archiving all threads older than a week...").update().exceptionally(new ExceptionHandler<>());
+            responseUpdater.setContent("Archiving all stale threads...").update().exceptionally(new ExceptionHandler<>());
             AtomicInteger removed = new AtomicInteger();
             Main.DB.getThreads(t -> {
                 ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
@@ -133,7 +133,7 @@ public class SupportThread {
                     return;
                 }
                 thread.getMessages(1).thenAccept(messages -> {
-                    if (messages.isEmpty() || messages.first().getCreationTimestamp().isBefore(Instant.now().minus(7, ChronoUnit.DAYS))) {
+                    if (messages.isEmpty() || messages.first().getCreationTimestamp().isBefore(Instant.now().minus(Environment.SUPPORT_STALE_DAYS, ChronoUnit.DAYS))) {
                         SupportThreadUtils.closeThread(thread, t, Main.API.getClientId());
                         Main.DB.removeThread(t.getThread());
                         responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
