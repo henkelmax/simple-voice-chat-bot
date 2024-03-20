@@ -1,6 +1,5 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
-import de.maxhenkel.voicechatbot.Environment;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 
