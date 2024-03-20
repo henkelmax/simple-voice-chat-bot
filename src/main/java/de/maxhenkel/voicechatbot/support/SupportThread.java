@@ -110,7 +110,7 @@ public class SupportThread {
             return;
         }
         supportChannel.sendMessage("Support for <@%s>".formatted(user.getId())).thenAccept(message -> {
-            message.createThread("Support thread for %s".formatted(user.getName()), AutoArchiveDuration.ONE_HOUR).thenAccept(thread -> {
+            message.createThread("Support thread for %s".formatted(user.getName()), AutoArchiveDuration.ONE_DAY).thenAccept(thread -> {
                 event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, please follow the steps in your support thread: <#%s>".formatted(user.getId(), thread.getId())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
                 thread.addThreadMember(user.getId()).thenAccept(unused -> {
                     Main.DB.addThread(new Thread(user.getId(), thread.getId()));
