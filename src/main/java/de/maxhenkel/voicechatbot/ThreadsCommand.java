@@ -25,7 +25,7 @@ public class ThreadsCommand {
                 return;
             }
             sb.append("<#%s>".formatted(thread.getId()));
-            if (thread.getThreadMembers().join().stream().anyMatch(threadMember -> threadMember.getUserId() == event.getInteraction().getUser().getId())) {
+            if (thread.getMembers().stream().anyMatch(threadMember -> threadMember.getUserId() == event.getInteraction().getUser().getId())) {
                 sb.append(" ✅");
             }
             sb.append("\n");
