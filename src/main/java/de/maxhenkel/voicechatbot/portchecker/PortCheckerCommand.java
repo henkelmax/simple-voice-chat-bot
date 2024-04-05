@@ -22,7 +22,7 @@ public class PortCheckerCommand {
                         true
                 )),
                 PortCheckerCommand::onCheckPort,
-                PermissionType.ADMINISTRATOR
+                PermissionType.MODERATE_MEMBERS
         );
     }
 
