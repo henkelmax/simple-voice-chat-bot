@@ -46,7 +46,18 @@ public class CommandRegistry {
                 .createGlobal(Main.API)
                 .join();
 
-        commands.put(command, new Command(command, listener));
+        SlashCommandCreateListener listenerWrapper = evt -> {
+            Optional<Server> server = evt.getSlashCommandInteraction().getServer();
+            if (server.isEmpty()) {
+                return;
+            }
+            if (server.get().getId() != Environment.SERVER_ID) {
+                return;
+            }
+            listener.onSlashCommandCreate(evt);
+        };
+
+        commands.put(command, new Command(command, listenerWrapper));
         Main.LOGGER.info("Added command '{}'", command);
     }
 

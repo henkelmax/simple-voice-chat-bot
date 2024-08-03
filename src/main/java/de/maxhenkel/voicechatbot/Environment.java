@@ -5,6 +5,7 @@ public class Environment {
     public static final String TOKEN = env("TOKEN", "");
     public static final String DATABASE_URL = env("DB_URL", "localhost:27017");
     public static final String DATABASE_NAME = env("DB_NAME", "discordbot");
+    public static final long SERVER_ID = Long.parseLong(env("SERVER_ID", "0"));
     public static final long SUPPORT_CHANNEL_ID = Long.parseLong(env("SUPPORT_CHANNEL_ID", "0"));
     public static final long SUPPORT_THREAD_CHANNEL_ID = Long.parseLong(env("SUPPORT_THREAD_CHANNEL_ID", "0"));
     public static final long SUPPORT_NOTIFICATION_CHANNEL = Long.parseLong(env("SUPPORT_NOTIFICATION_CHANNEL", "0"));
@@ -25,6 +26,10 @@ public class Environment {
 
     public static boolean validate() {
         boolean valid = true;
+        if (SERVER_ID <= 0L) {
+            Main.LOGGER.error("Invalid SERVER_ID environment variable");
+            valid = false;
+        }
         if (SUPPORT_CHANNEL_ID <= 0L) {
             Main.LOGGER.error("Invalid SUPPORT_CHANNEL_ID environment variable");
             valid = false;
