@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.ISnowflake;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -36,7 +37,7 @@ public class SupportCommand {
 
         User user = option.getAsUser();
 
-        TextChannel channel = event.getInteraction().getChannel().asTextChannel();
+        MessageChannelUnion channel = event.getInteraction().getChannel();
 
         event.deferReply(true).queue(hook -> {
             channel.getHistory().retrievePast(16).queue(messages -> {

@@ -2,7 +2,7 @@ package de.maxhenkel.voicechatbot.portchecker;
 
 import de.maxhenkel.voicechatbot.CommandRegistry;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -31,7 +31,7 @@ public class PortCheckerCommand {
         }
 
         String value = option.getAsString();
-        TextChannel channel = event.getInteraction().getChannel().asTextChannel();
+        MessageChannelUnion channel = event.getInteraction().getChannel();
 
         event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
         PortChecker.checkPort(channel, value);

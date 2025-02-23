@@ -2,7 +2,7 @@ package de.maxhenkel.voicechatbot;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -37,7 +37,7 @@ public class EmbedCommand {
 
         String value = option.getAsString().replace("\\n", "\n");
 
-        TextChannel channel = event.getChannel().asTextChannel();
+        MessageChannelUnion channel = event.getChannel();
 
         EmbedBuilder embed = parseEmbedString(value.replace("\\n", "\n"));
         channel.sendMessageEmbeds(embed.build()).queue(

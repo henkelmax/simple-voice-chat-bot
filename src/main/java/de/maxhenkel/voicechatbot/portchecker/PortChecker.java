@@ -3,7 +3,7 @@ package de.maxhenkel.voicechatbot.portchecker;
 import de.maxhenkel.voicechatbot.Environment;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 
 import java.io.IOException;
 import java.net.*;
@@ -18,7 +18,7 @@ public class PortChecker {
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    public static void checkPort(TextChannel channel, String url) {
+    public static void checkPort(MessageChannelUnion channel, String url) {
         MessageAppender appender = new MessageAppender(channel, url);
         appender.addLog("Pinging voice chat server '%s'".formatted(url)).startEmbed();
         checkPortAsync(url, appender);

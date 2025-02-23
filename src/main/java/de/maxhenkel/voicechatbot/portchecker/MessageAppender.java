@@ -2,7 +2,7 @@ package de.maxhenkel.voicechatbot.portchecker;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 
 import javax.annotation.Nullable;
 import java.awt.*;
@@ -18,11 +18,11 @@ public class MessageAppender {
     @Nullable
     private EmbedBuilder finalEmbed;
 
-    private final TextChannel channel;
+    private final MessageChannelUnion channel;
     private final String url;
     private final List<String> logs;
 
-    public MessageAppender(TextChannel channel, String url) {
+    public MessageAppender(MessageChannelUnion channel, String url) {
         this.channel = channel;
         this.url = url;
         this.logs = new ArrayList<>();
