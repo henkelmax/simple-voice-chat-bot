@@ -1,7 +1,6 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
-import org.javacord.api.entity.channel.ServerThreadChannel;
-import org.javacord.api.entity.channel.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 
 import java.util.List;
 
@@ -13,8 +12,8 @@ public interface Issue {
 
     List<String> getQuestions();
 
-    void onSelectIssue(TextChannel textChannel);
+    void onSelectIssue(ThreadChannel textChannel);
 
-    void sendQuestions(ServerThreadChannel thread);
+    void sendQuestions(ThreadChannel thread);
 
 }

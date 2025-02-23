@@ -1,12 +1,11 @@
 package de.maxhenkel.voicechatbot;
 
-import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.DiscordEntity;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.entity.server.Server;
-import org.javacord.api.entity.user.User;
-import org.javacord.api.event.message.MessageCreateEvent;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 import javax.annotation.Nullable;
 import java.awt.*;
@@ -20,83 +19,66 @@ import java.util.regex.Pattern;
 public class PingWatcher {
 
     private static final Pattern MENTION_REGEX = Pattern.compile("<@(\\d+)>");
-    private static final Set<Long> MODERATORS = new HashSet<>();
     private static final Map<Long, Integer> WARNED_USERS = new HashMap<>();
 
-    public static void init(DiscordApi api) {
-        if (Environment.NO_PING_ROLE <= 0L) {
-            return;
-        }
-        api.getServers().forEach(PingWatcher::initServer);
-    }
 
-    private static void initServer(Server server) {
-        server.getRoles()
-                .stream()
-                .filter(role -> !role.isEveryoneRole())
-                .flatMap(role -> role.getUsers().stream().filter(user -> server.hasPermission(user, PermissionType.MODERATE_MEMBERS)).map(DiscordEntity::getId))
-                .forEach(MODERATORS::add);
-    }
-
-    public static void onMessage(MessageCreateEvent event) {
-        Optional<User> optionalUser = event.getMessageAuthor().asUser();
-        if (optionalUser.isEmpty()) {
-            return;
-        }
-        User user = optionalUser.get();
-        Optional<Server> optionalServer = event.getServer();
-        if (optionalServer.isEmpty()) {
-            return;
-        }
-        Server server = optionalServer.get();
-
-        if (user.isBot() || isModerator(user)) {
-            return;
-        }
-        List<User> mentionedUsers = event.getMessage().getMentionedUsers();
-
-        if (mentionedUsers.stream().noneMatch(user1 -> isNoPing(user1, server))) {
+    public static void onMessage(MessageReceivedEvent event) {
+        User user = event.getAuthor();
+        Guild server = event.getGuild();
+        Member member = event.getMember();
+        if (member == null) {
             return;
         }
 
-        String message = event.getMessage().getContent();
+        if (user.isBot() || user.isSystem() || member.hasPermission(Permission.MODERATE_MEMBERS)) {
+            return;
+        }
+        List<Member> mentionedMembers = event.getMessage().getMentions().getMembers();
+
+        if (mentionedMembers.stream().noneMatch(m -> isNoPing(m, server))) {
+            return;
+        }
+
+        String message = event.getMessage().getContentRaw();
 
         Matcher matcher = MENTION_REGEX.matcher(message);
 
-        List<User> pingedUsers = new ArrayList<>();
+        List<Member> pingedMembers = new ArrayList<>();
         while (matcher.find()) {
             String id = matcher.group(1);
-            server.getMemberById(id).ifPresent(pingedUsers::add);
+            Member pingedMember = server.getMemberById(id);
+            if (pingedMember != null) {
+                pingedMembers.add(pingedMember);
+            }
         }
 
-        int warningAmount = WARNED_USERS.getOrDefault(user.getId(), 0) + 1;
-        WARNED_USERS.put(user.getId(), warningAmount);
+        int warningAmount = WARNED_USERS.getOrDefault(user.getIdLong(), 0) + 1;
+        WARNED_USERS.put(user.getIdLong(), warningAmount);
 
-        if (warningAmount <= 3 && pingedUsers.stream().noneMatch(user1 -> isNoPing(user1, server))) {
+        if (warningAmount <= 3 && pingedMembers.stream().noneMatch(m -> isNoPing(m, server))) {
             EmbedBuilder builder = new EmbedBuilder();
-            builder.setDescription("<@%s>!\nPlease disable pings when replying to admins or moderators!".formatted(user.getId()));
+            builder.setDescription("%s!\nPlease disable pings when replying to admins or moderators!".formatted(user.getAsMention()));
             builder.setColor(Color.ORANGE);
-            event.getMessage().reply(builder);
+            event.getMessage().replyEmbeds(builder.build()).queue();
             return;
         }
 
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setDescription("<@%s>!\nDon't ping admins or moderators!".formatted(user.getId()));
+        builder.setDescription("%s!\nDon't ping admins or moderators!".formatted(user.getAsMention()));
         builder.setColor(Color.RED);
-        event.getMessage().reply(builder);
+        event.getMessage().replyEmbeds(builder.build()).queue();
 
-        user.timeout(server, Duration.of(1, ChronoUnit.HOURS), "Pinging admins or moderators");
+        member.timeoutFor(Duration.of(1, ChronoUnit.HOURS)).reason("Pinging admins or moderators").queue();
     }
 
-    private static boolean isModerator(User user) {
-        return MODERATORS.contains(user.getId());
-    }
-
-    private static boolean isNoPing(User user, @Nullable Server server) {
+    private static boolean isNoPing(Member member, @Nullable Guild server) {
         if (server == null) {
             return false;
         }
-        return user.getRoles(server).stream().anyMatch(role -> role.getId() == Environment.NO_PING_ROLE);
+        if (Environment.NO_PING_ROLE <= 0L) {
+            return false;
+        }
+        return member.getRoles().stream().anyMatch(role -> role.getIdLong() == Environment.NO_PING_ROLE);
     }
 
 }

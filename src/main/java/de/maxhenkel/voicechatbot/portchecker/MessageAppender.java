@@ -1,8 +1,8 @@
 package de.maxhenkel.voicechatbot.portchecker;
 
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.MessageUpdater;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 
 import javax.annotation.Nullable;
 import java.awt.*;
@@ -12,7 +12,7 @@ import java.util.List;
 public class MessageAppender {
 
     @Nullable
-    private MessageUpdater messageUpdater;
+    private Message messageUpdater;
     @Nullable
     private EmbedBuilder builder;
     @Nullable
@@ -34,7 +34,7 @@ public class MessageAppender {
         builder.setColor(Color.BLUE);
         builder.setDescription(constructBody());
 
-        channel.sendMessage(builder).thenAccept(message -> setUpdater(message.createUpdater()));
+        channel.sendMessageEmbeds(builder.build()).queue(message -> setUpdater(message));
         return this;
     }
 
@@ -75,7 +75,7 @@ public class MessageAppender {
         return this;
     }
 
-    private void setUpdater(MessageUpdater updater) {
+    private void setUpdater(Message updater) {
         messageUpdater = updater;
         updateMessage();
     }
@@ -85,9 +85,11 @@ public class MessageAppender {
             return this;
         }
         builder.setDescription(constructBody());
-        messageUpdater.setEmbed(builder).replaceMessage();
+
         if (finalEmbed != null) {
-            messageUpdater.addEmbed(finalEmbed).applyChanges();
+            messageUpdater.editMessageEmbeds(builder.build(), finalEmbed.build()).queue();
+        } else {
+            messageUpdater.editMessageEmbeds(builder.build()).queue();
         }
         return this;
     }

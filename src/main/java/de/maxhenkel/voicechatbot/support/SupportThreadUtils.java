@@ -5,64 +5,60 @@ import de.maxhenkel.voicechatbot.Environment;
 import de.maxhenkel.voicechatbot.ExceptionHandler;
 import de.maxhenkel.voicechatbot.Main;
 import de.maxhenkel.voicechatbot.db.Thread;
-import org.javacord.api.entity.channel.*;
-import org.javacord.api.entity.message.MessageAuthor;
-import org.javacord.api.entity.message.component.Button;
-import org.javacord.api.entity.message.component.ButtonBuilder;
-import org.javacord.api.entity.message.component.ButtonStyle;
-import org.javacord.api.entity.message.embed.Embed;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.entity.server.Server;
-import org.javacord.api.entity.user.User;
-import org.javacord.api.interaction.InteractionBase;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.Channel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.interactions.Interaction;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 import javax.annotation.Nullable;
 import java.awt.*;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class SupportThreadUtils {
 
-    public static Thread getThreadIfOwner(InteractionBase interactionBase) {
-        Thread t = Main.DB.getThreadByUser(interactionBase.getUser().getId());
-        TextChannel channel = interactionBase.getChannel().orElse(null);
-        if (channel == null || t == null || t.getThread() != channel.getId()) {
+    public static Thread getThreadIfOwner(Interaction interaction) {
+        Thread t = Main.DB.getThreadByUser(interaction.getUser().getIdLong());
+        Channel channel = interaction.getChannel();
+        if (channel == null || t == null || t.getThread() != channel.getIdLong()) {
             return null;
         }
         return t;
     }
 
-    public static boolean isSupportThreadChannel(Channel channel) {
-        return channel.getId() == Environment.SUPPORT_THREAD_CHANNEL_ID;
+    public static boolean isSupportThreadChannel(MessageChannel channel) {
+        return channel.getIdLong() == Environment.SUPPORT_THREAD_CHANNEL_ID;
     }
 
     @Nullable
-    public static ServerTextChannel getChannel(long id) {
-        Channel channel = Main.API.getChannelById(id).orElse(null);
-        if (channel == null) {
-            return null;
-        }
-        return channel.asServerTextChannel().orElse(null);
+    public static TextChannel getChannel(long id) {
+        return Main.API.getTextChannelById(id);
     }
 
     @Nullable
-    public static ServerThreadChannel getThread(@Nullable Channel channel) {
+    public static ThreadChannel getThread(@Nullable Channel channel) {
         if (channel == null) {
             return null;
         }
-        ServerThreadChannel thread = channel.asServerThreadChannel().orElse(null);
-        if (thread == null) {
+        if (!(channel instanceof ThreadChannel thread)) {
             return null;
         }
-        if (!isSupportThreadChannel(thread.getParent())) {
+        if (!isSupportThreadChannel(thread.getParentMessageChannel())) {
             return null;
         }
         return thread;
     }
 
     @Nullable
-    public static ServerThreadChannel getThread(InteractionBase interactionBase) {
-        return getThread(interactionBase.getChannel().orElse(null));
+    public static ThreadChannel getThread(Interaction interaction) {
+        return getThread(interaction.getChannel());
     }
 
     @Nullable
@@ -73,28 +69,20 @@ public class SupportThreadUtils {
             return null;
         }
 
-        Channel c = Main.API.getChannelById(thread.getThread()).orElse(null);
-        if (c == null) {
+        ThreadChannel threadChannel = Main.API.getThreadChannelById(thread.getThread());
+        if (threadChannel == null) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it doesn't exist anymore", thread.getThread(), thread.getUser());
             return null;
         }
 
-        ServerThreadChannel threadChannel = c.asServerThreadChannel().orElse(null);
-
-        if (threadChannel == null) {
-            Main.DB.removeThread(thread.getThread());
-            Main.LOGGER.info("Removed thread {} of user {} as it isn't actually a thread", thread.getThread(), thread.getUser());
-            return null;
-        }
-
-        if (!isSupportThreadChannel(threadChannel.getParent())) {
+        if (!isSupportThreadChannel(threadChannel.getParentMessageChannel())) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it was not a child of the support channel", thread.getThread(), thread.getUser());
             return null;
         }
 
-        if (threadChannel.getMetadata().isLocked()) {
+        if (threadChannel.isLocked()) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it was locked", thread.getThread(), thread.getUser());
             return null;
@@ -102,52 +90,47 @@ public class SupportThreadUtils {
         return thread;
     }
 
-    public static boolean isStaff(MessageAuthor author) {
-        User user = author.asUser().orElse(null);
-        if (user == null) {
+    public static boolean isStaff(@Nullable Member member) {
+        if (member == null) {
             return false;
         }
-        Server server = author.getMessage().getServer().orElse(null);
-        if (server == null) {
-            return false;
-        }
-        return isStaff(user, server);
+        return member.getRoles().stream().anyMatch(role -> role.getIdLong() == Environment.SUPPORT_ROLE);
     }
 
-    public static boolean isStaff(User user, @Nullable Server server) {
-        if (server == null) {
-            return false;
-        }
-        return user.getRoles(server).stream().anyMatch(role -> role.getId() == Environment.SUPPORT_ROLE);
-    }
-
-    public static void closeThread(@Nullable ServerThreadChannel thread, @Nullable Thread t, long locker) {
+    public static void closeThread(@Nullable ThreadChannel thread, @Nullable Thread t, User locker) {
         if (thread == null || t == null) {
             return;
         }
-        thread.sendMessage(new EmbedBuilder().setDescription("""
-                <@%s> locked this thread.
-                You can always open a new one in <#%s> if you need help again.
-                """.formatted(locker, Environment.SUPPORT_CHANNEL_ID)).setColor(Color.RED)).thenAccept(message -> {
-            Main.DB.removeThread(thread.getId());
-            thread.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update().exceptionally(new ExceptionHandler<>());
-        }).exceptionally(new ExceptionHandler<>());
-        updateStaffNotification(t, "Thread locked by <@%s>".formatted(locker));
+        thread.sendMessageEmbeds(
+                new EmbedBuilder()
+                        .setDescription("""
+                                %s locked this thread.
+                                You can always open a new one in <#%s> if you need help again.
+                                """.formatted(locker.getAsMention(), Environment.SUPPORT_CHANNEL_ID))
+                        .setColor(Color.RED)
+                        .build()
+        ).queue(message -> {
+            Main.DB.removeThread(thread.getIdLong());
+
+            thread.getManager()
+                    .setArchived(true)
+                    .setLocked(true)
+                    .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_HOUR)
+                    .queue(
+                            v -> updateStaffNotification(t, "Thread locked by %s".formatted(locker.getAsMention())),
+                            new ExceptionHandler()
+                    );
+        }, new ExceptionHandler());
     }
 
     public static Button closeThreadButton() {
-        return new ButtonBuilder().setCustomId(SupportThread.BUTTON_ABORT_SUPPORT).setLabel("I don't need help anymore").setStyle(ButtonStyle.DANGER).build();
+        return Button.danger(SupportThread.BUTTON_ABORT_SUPPORT, "I don't need help anymore");
     }
 
-    public static CompletableFuture<Void> notifyStaff(ServerThreadChannel thread, Thread t) {
-        Channel c = Main.API.getChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL).orElse(null);
-        if (c == null) {
-            Main.LOGGER.warn("Failed to find notification channel");
-            return CompletableFuture.completedFuture(null);
-        }
-        TextChannel textChannel = c.asTextChannel().orElse(null);
+    public static CompletableFuture<Void> notifyStaff(ThreadChannel thread, Thread t) {
+        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL);
         if (textChannel == null) {
-            Main.LOGGER.warn("Notification channel is not a text channel");
+            Main.LOGGER.warn("Failed to find notification channel");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -155,25 +138,30 @@ public class SupportThreadUtils {
             updateStaffNotification(t, "Added staff again");
             return CompletableFuture.completedFuture(null);
         }
+
         CompletableFuture<Void> future = new CompletableFuture<>();
-        textChannel.sendMessage(new EmbedBuilder()
+
+        EmbedBuilder embed = new EmbedBuilder()
                 .setTitle("New Support Request")
-                .addField("User", "<@%s>".formatted(t.getUser()))
-                .addField("Thread", "<#%s>".formatted(thread.getId()))
-                .setTimestampToNow()
-                .setColor(Color.BLUE)
-        ).thenAccept(message -> {
-            Main.DB.setNotifyMessage(t.getThread(), message.getId());
-            future.complete(null);
-        }).exceptionally(throwable -> {
-            future.completeExceptionally(throwable);
-            return null;
-        });
+                .addField("User", "<@%s>".formatted(t.getUser()), false)
+                .addField("Thread", thread.getAsMention(), false)
+                .setTimestamp(Instant.now())
+                .setColor(Color.BLUE);
+
+        textChannel.sendMessageEmbeds(embed.build())
+                .queue(message -> {
+                    Main.DB.setNotifyMessage(t.getThread(), message.getIdLong());
+                    future.complete(null);
+                }, error -> {
+                    Main.LOGGER.error("Failed to send staff notification", error);
+                    future.completeExceptionally(error);
+                });
+
         return future;
     }
 
-    public static CompletableFuture<Void> notifyStaff(ServerThreadChannel thread) {
-        Thread t = Main.DB.getThread(thread.getId());
+    public static CompletableFuture<Void> notifyStaff(ThreadChannel thread) {
+        Thread t = Main.DB.getThread(thread.getIdLong());
         if (t == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -181,30 +169,36 @@ public class SupportThreadUtils {
     }
 
     public static void updateStaffNotification(Thread t, String message) {
-        Channel c = Main.API.getChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL).orElse(null);
-        if (c == null) {
-            Main.LOGGER.warn("Failed to find notification channel");
-            return;
-        }
-        TextChannel textChannel = c.asTextChannel().orElse(null);
+        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL);
         if (textChannel == null) {
-            Main.LOGGER.warn("Notification channel is not a text channel");
+            Main.LOGGER.warn("Failed to find notification channel");
             return;
         }
 
         if (t.getNotifyMessage() <= 0) {
             return;
         }
-        Main.API.getMessageById(t.getNotifyMessage(), textChannel).thenAccept(msg -> {
-            List<Embed> embeds = msg.getEmbeds();
-            if (embeds.isEmpty()) {
-                return;
-            }
-            EmbedBuilder embed = embeds.get(0).toBuilder();
-            embed.addField("Update %s UTC".formatted(Date.currentDate()), message);
+        textChannel.retrieveMessageById(t.getNotifyMessage())
+                .queue(msg -> {
+                    List<MessageEmbed> embeds = msg.getEmbeds();
+                    if (embeds.isEmpty()) {
+                        return;
+                    }
 
-            msg.createUpdater().setEmbed(embed).applyChanges().exceptionally(new ExceptionHandler<>());
-        }).exceptionally(new ExceptionHandler<>());
+                    MessageEmbed original = embeds.get(0);
+                    EmbedBuilder embed = new EmbedBuilder()
+                            .setTitle(original.getTitle())
+                            .setDescription(original.getDescription())
+                            .setColor(original.getColor())
+                            .setTimestamp(original.getTimestamp());
+
+                    for (MessageEmbed.Field field : original.getFields()) {
+                        embed.addField(field);
+                    }
+
+                    embed.addField("Update %s UTC".formatted(Date.currentDate()), message, false);
+                    msg.editMessageEmbeds(embed.build()).queue();
+                }, new ExceptionHandler());
     }
 
 }

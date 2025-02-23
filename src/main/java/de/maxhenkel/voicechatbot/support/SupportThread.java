@@ -4,24 +4,34 @@ import de.maxhenkel.voicechatbot.*;
 import de.maxhenkel.voicechatbot.db.Thread;
 import de.maxhenkel.voicechatbot.support.issues.Issue;
 import de.maxhenkel.voicechatbot.support.issues.Issues;
-import org.javacord.api.entity.channel.AutoArchiveDuration;
-import org.javacord.api.entity.channel.ServerTextChannel;
-import org.javacord.api.entity.channel.ServerThreadChannel;
-import org.javacord.api.entity.message.Message;
-import org.javacord.api.entity.message.MessageAuthor;
-import org.javacord.api.entity.message.MessageFlag;
-import org.javacord.api.entity.message.MessageType;
-import org.javacord.api.entity.message.component.*;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.entity.user.User;
-import org.javacord.api.event.interaction.ButtonClickEvent;
-import org.javacord.api.event.interaction.ModalSubmitEvent;
-import org.javacord.api.event.interaction.SelectMenuChooseEvent;
-import org.javacord.api.event.interaction.SlashCommandCreateEvent;
-import org.javacord.api.event.message.MessageCreateEvent;
-import org.javacord.api.interaction.*;
-import org.javacord.api.interaction.callback.InteractionOriginalResponseUpdater;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageType;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.commands.Command;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
+import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.interactions.components.text.TextInput;
+import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
+import net.dv8tion.jda.api.interactions.modals.Modal;
+import net.dv8tion.jda.api.interactions.modals.ModalInteraction;
+import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 
 import java.awt.*;
 import java.time.Instant;
@@ -32,7 +42,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class SupportThread {
 
@@ -53,7 +62,7 @@ public class SupportThread {
     public static final String CLEANUP_COMMAND = "cleanup";
 
     public static void init() {
-        ServerTextChannel supportChannel = SupportThreadUtils.getChannel(Environment.SUPPORT_CHANNEL_ID);
+        TextChannel supportChannel = SupportThreadUtils.getChannel(Environment.SUPPORT_CHANNEL_ID);
         if (supportChannel == null) {
             throw new IllegalStateException("Support channel not found");
         }
@@ -66,355 +75,385 @@ public class SupportThread {
         CommandRegistry.registerCommand(CLOSE_COMMAND, "Closes a support thread", SupportThread::onCloseCommand);
         CommandRegistry.registerCommand(UNLOCK_COMMAND, "Unlocks a thread", SupportThread::onUnlockCommand);
         CommandRegistry.registerCommand(ISSUE_COMMAND, "Sends an issue template to a thread",
-                Collections.singletonList(SlashCommandOption.createWithChoices(
-                        SlashCommandOptionType.STRING,
-                        "issue",
-                        "The issue to show",
-                        true,
-                        Issues.ISSUES.stream().map(issue -> SlashCommandOptionChoice.create(issue.getName(), issue.getId())).collect(Collectors.toList())
-                )),
+                Collections.singletonList(
+                        new OptionData(OptionType.STRING, "issue", "The issue to show", true)
+                                .addChoices(Issues.ISSUES.stream().map(issue -> new Command.Choice(issue.getName(), issue.getId())).toList())
+                ),
                 SupportThread::onIssueCommand);
-        CommandRegistry.registerCommand(CLEANUP_COMMAND, "Cleans up old threads", SupportThread::onCleanupCommand, PermissionType.ADMINISTRATOR);
+        CommandRegistry.registerCommand(CLEANUP_COMMAND, "Cleans up old threads", SupportThread::onCleanupCommand, Permission.ADMINISTRATOR);
 
-        supportChannel.getMessagesAsStream().forEach(message -> {
-            if (message.getAuthor().getId() == Main.API.getClientId()) {
-                message.delete().exceptionally(new ExceptionHandler<>());
-            }
-        });
-
-        supportChannel.sendMessage(new EmbedBuilder()
-                        .setTitle("Support")
-                        .setDescription("""
-                                Please press the `Get Support` button to get support.
-                                You will get asked a couple of questions about your issue and then you'll get help by our staff.
-                                """)
-                        .setColor(Color.GREEN),
-                ActionRow.of(new ButtonBuilder().setCustomId(SupportThread.BUTTON_GET_SUPPORT).setLabel("Get Support").setStyle(ButtonStyle.SUCCESS).build())
-        ).exceptionally(new ExceptionHandler<>());
+        supportChannel.getIterableHistory()
+                .forEachAsync(message -> {
+                    if (message.getAuthor().getIdLong() == supportChannel.getJDA().getSelfUser().getIdLong()) {
+                        message.delete().queue();
+                    }
+                    return true;
+                })
+                .thenAccept(o -> {
+                    supportChannel.sendMessageEmbeds(new EmbedBuilder()
+                                    .setTitle("Support")
+                                    .setDescription("""
+                                            Please press the `Get Support` button to get support.
+                                            You will get asked a couple of questions about your issue and then you'll get help by our staff.
+                                            """)
+                                    .setColor(Color.GREEN)
+                                    .build()
+                            )
+                            .addComponents(ActionRow.of(Button.success(SupportThread.BUTTON_GET_SUPPORT, "Get Support")))
+                            .queue();
+                })
+                .exceptionally(error -> {
+                    Main.LOGGER.error("Error iterating messages", error);
+                    return null;
+                });
     }
 
-    private static void onGetSupportButtonPressed(ButtonClickEvent event) {
-        ServerTextChannel supportChannel = SupportThreadUtils.getChannel(Environment.SUPPORT_THREAD_CHANNEL_ID);
+    private static void onGetSupportButtonPressed(ButtonInteractionEvent event) {
+        TextChannel supportChannel = SupportThreadUtils.getChannel(Environment.SUPPORT_THREAD_CHANNEL_ID);
         if (supportChannel == null) {
             Main.LOGGER.error("Support thread channel not found");
             return;
         }
         User user = event.getInteraction().getUser();
-        Thread t = SupportThreadUtils.getThread(user.getId());
+        Thread t = SupportThreadUtils.getThread(user.getIdLong());
         if (t != null) {
-            event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already have a support thread: <#%s>".formatted(user.getId(), t.getThread())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
+            event.getInteraction().reply("Hey %s, you already have a support thread: <#%s>".formatted(user.getAsMention(), t.getThread())).setEphemeral(true).queue();
             return;
         }
-        if (ThreadCooldown.isOnCooldown(user.getId())) {
-            event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, you already recently opened a support thread. Please wait a while to create a new one.".formatted(user.getId())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
+        if (ThreadCooldown.isOnCooldown(user.getIdLong())) {
+            event.getInteraction().reply("Hey %s, you already recently opened a support thread. Please wait a while to create a new one.".formatted(user.getAsMention())).setEphemeral(true).queue();
             return;
         }
-        supportChannel.sendMessage("Support for <@%s>".formatted(user.getId())).thenAccept(message -> {
-            message.createThread("Support thread for %s".formatted(user.getName()), AutoArchiveDuration.ONE_DAY).thenAccept(thread -> {
-                event.getButtonInteraction().createImmediateResponder().setContent("Hey <@%s>, please follow the steps in your support thread: <#%s>".formatted(user.getId(), thread.getId())).setFlags(MessageFlag.EPHEMERAL).respond().exceptionally(new ExceptionHandler<>());
-                thread.addThreadMember(user.getId()).thenAccept(unused -> {
-                    Main.DB.addThread(new Thread(user.getId(), thread.getId()));
-                    ThreadCooldown.setCooldown(user.getId());
+        supportChannel.sendMessage("Support for %s".formatted(user.getAsMention())).queue(message -> {
+            message.createThreadChannel("Support thread for %s".formatted(user.getName())).setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_24_HOURS).queue(thread -> {
+                event.getInteraction().reply("Hey %s, please follow the steps in your support thread: %s".formatted(user.getAsMention(), thread.getAsMention())).setEphemeral(true).queue();
+                thread.addThreadMember(user).queue(unused -> {
+                    Main.DB.addThread(new Thread(user.getIdLong(), thread.getIdLong()));
+                    ThreadCooldown.setCooldown(user.getIdLong());
                     onThreadCreated(thread, user);
-                }).exceptionally(new ExceptionHandler<>());
-            }).exceptionally(new ExceptionHandler<>());
-        }).exceptionally(new ExceptionHandler<>());
+                }, new ExceptionHandler());
+            }, new ExceptionHandler());
+        }, new ExceptionHandler());
     }
 
-    private static void onCleanupCommand(SlashCommandCreateEvent event) {
-        event.getSlashCommandInteraction().respondLater().thenAccept(responseUpdater -> {
-            responseUpdater.setContent("Archiving all stale threads...").update().exceptionally(new ExceptionHandler<>());
+    private static void onCleanupCommand(SlashCommandInteractionEvent event) {
+        event.reply("Archiving all stale threads...").queue(hook -> {
             AtomicInteger removed = new AtomicInteger();
+
             Main.DB.getThreads(t -> {
-                ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
+                ThreadChannel thread = event.getJDA().getThreadChannelById(t.getThread());
                 if (thread == null) {
                     Main.DB.removeThread(t.getThread());
-                    responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
+                    updateProgress(hook, removed.incrementAndGet());
                     return;
                 }
-                thread.getMessages(1).thenAccept(messages -> {
-                    if (messages.isEmpty() || messages.first().getCreationTimestamp().isBefore(Instant.now().minus(Environment.SUPPORT_STALE_DAYS, ChronoUnit.DAYS))) {
-                        SupportThreadUtils.closeThread(thread, t, Main.API.getClientId());
+                thread.getHistory().retrievePast(1).queue(messages -> {
+                    if (messages.isEmpty() || messages.get(0).getTimeCreated().toInstant()
+                            .isBefore(Instant.now().minus(Environment.SUPPORT_STALE_DAYS, ChronoUnit.DAYS))) {
+
+                        SupportThreadUtils.closeThread(thread, t, event.getJDA().getSelfUser());
                         Main.DB.removeThread(t.getThread());
-                        responseUpdater.setContent("Archived %s threads...".formatted(removed.incrementAndGet())).update().exceptionally(new ExceptionHandler<>());
+                        updateProgress(hook, removed.incrementAndGet());
                     }
-                }).exceptionally(new ExceptionHandler<>());
+                }, new ExceptionHandler());
             });
+
             Main.EXECUTOR.schedule(() -> {
-                responseUpdater.setContent("Finished archiving %s threads.".formatted(removed.get())).update().exceptionally(new ExceptionHandler<>());
+                hook.editOriginal("Finished archiving %d threads.".formatted(removed.get())).queue();
             }, 5, TimeUnit.SECONDS);
-        }).exceptionally(new ExceptionHandler<>());
+        });
     }
 
-    private static void onIssueCommand(SlashCommandCreateEvent event) {
-        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
-        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+    private static void updateProgress(InteractionHook hook, int count) {
+        hook.editOriginal("Archived %d threads...".formatted(count)).queue();
+    }
+
+    private static void onIssueCommand(SlashCommandInteractionEvent event) {
+        ThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        SlashCommandInteraction interaction = event.getInteraction();
         if (thread == null) {
             return;
         }
-        if (!SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+        if (!SupportThreadUtils.isStaff(interaction.getMember())) {
             return;
         }
-        List<SlashCommandInteractionOption> arguments = event.getSlashCommandInteraction().getArguments();
-        if (arguments.size() != 1) {
+        List<OptionMapping> options = event.getOptions();
+        if (options.size() != 1) {
             return;
         }
-        String value = arguments.get(0).getStringValue().orElse(null);
-        if (value == null) {
-            return;
-        }
+
+        String value = options.get(0).getAsString();
         Issue issue = Issues.byId(value);
         if (issue == null) {
             return;
         }
-        thread.addThreadMember(event.getInteraction().getUser());
-        thread.sendMessage(new EmbedBuilder()
-                .setTitle("Issue type changed")
-                .setDescription("""
-                        <@%s> changed the issue type to `%s`.
-                                                            
-                        Please provide additional information, so we can help you.
-                        """.formatted(event.getInteraction().getUser().getId(), issue.getName()))
-                .setColor(Color.GREEN)
-        ).exceptionally(new ExceptionHandler<>());
+
+        thread.addThreadMember(event.getUser()).queue();
+        thread.sendMessageEmbeds(
+                new EmbedBuilder()
+                        .setTitle("Issue type changed")
+                        .setDescription("""
+                                %s changed the issue type to `%s`.
+                                
+                                Please provide additional information, so we can help you.
+                                """.formatted(event.getUser().getAsMention(), issue.getName()))
+                        .setColor(Color.GREEN)
+                        .build()
+        ).queue();
+
         issue.onSelectIssue(thread);
         issue.sendQuestions(thread);
-        interaction.createImmediateResponder()
-                .setContent(issue.getName())
-                .setFlags(MessageFlag.EPHEMERAL)
-                .respond().exceptionally(new ExceptionHandler<>());
+
+        event.reply(issue.getName())
+                .setEphemeral(true)
+                .queue();
     }
 
-    private static void onUnlockCommand(SlashCommandCreateEvent event) {
-        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
-        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+    private static void onUnlockCommand(SlashCommandInteractionEvent event) {
+        ThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        SlashCommandInteraction interaction = event.getInteraction();
         if (thread == null) {
             return;
         }
-        if (!SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+        if (!SupportThreadUtils.isStaff(interaction.getMember())) {
             return;
         }
 
-        Main.DB.unlockThread(thread.getId());
+        Main.DB.unlockThread(thread.getIdLong());
         SupportThreadUtils.notifyStaff(thread).thenAccept(unused -> {
-            Thread t = Main.DB.getThread(thread.getId());
+            Thread t = Main.DB.getThread(thread.getIdLong());
             if (t != null) {
-                SupportThreadUtils.updateStaffNotification(t, "<@%s> unlocked the thread".formatted(event.getInteraction().getUser().getId()));
+                SupportThreadUtils.updateStaffNotification(t, "%s unlocked the thread".formatted(event.getInteraction().getUser().getAsMention()));
             }
-        }).exceptionally(new ExceptionHandler<>());
-        interaction.createImmediateResponder()
+        }).exceptionally(throwable -> {
+            Main.LOGGER.error("Failed to notify staff", throwable);
+            return null;
+        });
+        interaction.reply("Thread unlocked")
+                .setEphemeral(true)
                 .setContent("Thread unlocked")
-                .setFlags(MessageFlag.EPHEMERAL)
-                .respond().exceptionally(new ExceptionHandler<>());
+                .queue();
     }
 
-    private static void onCloseCommand(SlashCommandCreateEvent event) {
-        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
-        SlashCommandInteraction interaction = event.getSlashCommandInteraction();
+    private static void onCloseCommand(SlashCommandInteractionEvent event) {
+        ThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        SlashCommandInteraction interaction = event.getInteraction();
         if (thread == null) {
-            interaction.respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+            event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
             return;
         }
-        if (!SupportThreadUtils.isStaff(interaction.getUser(), interaction.getServer().orElse(null))) {
+        if (!SupportThreadUtils.isStaff(interaction.getMember())) {
             return;
         }
-        Thread t = Main.DB.getThread(thread.getId());
+        Thread t = Main.DB.getThread(thread.getIdLong());
         if (t != null) {
-            SupportThreadUtils.closeThread(thread, t, interaction.getUser().getId());
-            interaction.createImmediateResponder()
-                    .setContent("Thread closed")
-                    .setFlags(MessageFlag.EPHEMERAL)
-                    .respond()
-                    .exceptionally(new ExceptionHandler<>());
+            SupportThreadUtils.closeThread(thread, t, interaction.getUser());
+            interaction.reply("Thread closed")
+                    .setEphemeral(true)
+                    .queue();
         } else {
-            interaction.createImmediateResponder()
-                    .setContent("Can't find thread")
-                    .setFlags(MessageFlag.EPHEMERAL)
-                    .respond()
-                    .exceptionally(new ExceptionHandler<>());
+            interaction.reply("Can't find thread")
+                    .setEphemeral(true)
+                    .queue();
         }
     }
 
-    private static void onConfirmAnswersButtonPressed(ButtonClickEvent event) {
+    private static void onConfirmAnswersButtonPressed(ButtonInteractionEvent event) {
         Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
-        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+        ThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         if (t == null || thread == null) {
-            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+            event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
             return;
         }
         onConfirmAnswers(thread, t, event);
     }
 
-    private static void onAbortSupportButtonPressed(ButtonClickEvent event) {
-        SupportThreadUtils.closeThread(SupportThreadUtils.getThread(event.getInteraction()), SupportThreadUtils.getThreadIfOwner(event.getInteraction()), event.getInteraction().getUser().getId());
-        event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+    private static void onAbortSupportButtonPressed(ButtonInteractionEvent event) {
+        SupportThreadUtils.closeThread(SupportThreadUtils.getThread(event.getInteraction()), SupportThreadUtils.getThreadIfOwner(event.getInteraction()), event.getInteraction().getUser());
+        event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
     }
 
-    private static void onSupportKeyButtonPressed(ButtonClickEvent event) {
-        Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
-        if (t == null) {
-            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+    private static void onSupportKeyButtonPressed(ButtonInteractionEvent event) {
+        Thread thread = SupportThreadUtils.getThreadIfOwner(event);
+        if (thread == null) {
+            event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
             return;
         }
 
-        ButtonInteraction buttonInteraction = event.getButtonInteraction();
-        buttonInteraction.respondWithModal(MODAL_SUPPORT_KEY, "Support Key",
-                ActionRow.of(TextInput.create(TextInputStyle.SHORT, TEXT_FIELD_SUPPORT_KEY, "Your Support Key"))
-        ).exceptionally(new ExceptionHandler<>());
+        Modal modal = Modal.create(MODAL_SUPPORT_KEY, "Support Key")
+                .addComponents(
+                        ActionRow.of(
+                                TextInput.create(TEXT_FIELD_SUPPORT_KEY, "Your Support Key", TextInputStyle.SHORT)
+                                        .setRequired(true)
+                                        .build()
+                        )
+                ).build();
+
+        event.replyModal(modal).queue();
     }
 
-    public static void onMessage(MessageCreateEvent event) {
-        ServerThreadChannel channel = SupportThreadUtils.getThread(event.getChannel());
+    public static void onMessage(MessageReceivedEvent event) {
+        ThreadChannel channel = SupportThreadUtils.getThread(event.getChannel());
         if (channel == null) {
             return;
         }
 
-        MessageAuthor messageAuthor = event.getMessageAuthor();
-        if (!messageAuthor.isRegularUser()) {
+        User messageAuthor = event.getAuthor();
+        if (messageAuthor.isBot() || messageAuthor.isSystem()) {
             return;
         }
-        Thread thread = Main.DB.getThread(channel.getId());
+        Thread thread = Main.DB.getThread(channel.getIdLong());
 
         if (thread == null) {
-            event.getMessage().delete().thenAccept(unused -> {
-                channel.createUpdater().setArchivedFlag(true).setLockedFlag(true).setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update().exceptionally(new ExceptionHandler<>());
-            }).exceptionally(new ExceptionHandler<>());
+            event.getMessage().delete().queue(unused -> {
+                channel.getManager().setArchived(true).setLocked(true).setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_HOUR).queue();
+            }, new ExceptionHandler());
             return;
         }
 
-        if (thread.isUnlocked()) {
-            if (SupportThreadUtils.isStaff(messageAuthor)) {
-                channel.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_HOUR).update().exceptionally(new ExceptionHandler<>());
+        if (thread.isUnlocked() && event.getMember() != null) {
+            if (SupportThreadUtils.isStaff(event.getMember())) {
+                channel.getManager().setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_HOUR).queue();
             }
             return;
         }
 
-        if (thread.getUser() != messageAuthor.getId()) {
-            event.getMessage().delete().exceptionally(new ExceptionHandler<>());
+        if (thread.getUser() != messageAuthor.getIdLong()) {
+            event.getMessage().delete().queue();
             return;
         }
-        event.getMessage().reply("<@%s>, please follow the instructions of the bot to be able to write messages in this thread!".formatted(messageAuthor.getId())).thenAccept(message -> {
+        event.getMessage().reply("%s, please follow the instructions of the bot to be able to write messages in this thread!".formatted(messageAuthor.getAsMention())).queue(message -> {
             Main.EXECUTOR.schedule(() -> {
-                event.getMessage().delete().exceptionally(new ExceptionHandler<>());
+                event.getMessage().delete().queue();
             }, 3, TimeUnit.SECONDS);
             Main.EXECUTOR.schedule(() -> {
-                message.delete().exceptionally(new ExceptionHandler<>());
+                message.delete().queue();
             }, 10, TimeUnit.SECONDS);
-        });
+        }, new ExceptionHandler());
 
     }
 
-    private static void onThreadCreated(ServerThreadChannel thread, User user) {
-        thread.sendMessage(
-                new EmbedBuilder()
-                        .setTitle("Support")
-                        .setDescription("""
-                                **To get support you must first read the [wiki](https://modrepo.de/minecraft/voicechat/wiki) and the [FAQ](https://modrepo.de/minecraft/voicechat/faq).**
-                                Please make sure that you have read everything thoroughly and that your problem is certainly not covered there.
-                                If this is the case, please generate a support key [here](https://modrepo.de/minecraft/voicechat/wiki/support).
-                                After clicking the `Get Support!` button below this message you will be asked to enter the support key.
-                                """)
-                        .addField("Important", "*By clicking the get support button, you agree that any logs you upload here will be uploaded to [mclo.gs](https://mclo.gs)!*")
-                        .addField("Useful Links",
-                                String.join(" | ",
-                                        "[Mod Description](https://modrinth.com/mod/simple-voice-chat)",
-                                        "[FAQ](https://modrepo.de/minecraft/voicechat/faq)",
-                                        "[Wiki](https://modrepo.de/minecraft/voicechat/wiki)",
-                                        "[Downloads](https://modrepo.de/minecraft/voicechat/downloads)"
-                                )
-                        )
-                        .setColor(Color.BLUE),
-                ActionRow.of(
-                        new ButtonBuilder().setCustomId(BUTTON_SUPPORT_KEY).setLabel("Get Support!").setStyle(ButtonStyle.PRIMARY).build(),
-                        new ButtonBuilder().setCustomId(BUTTON_ABORT_SUPPORT).setLabel("Nevermind...").setStyle(ButtonStyle.DANGER).build()
-                )
-        ).exceptionally(new ExceptionHandler<>());
+    private static void onThreadCreated(ThreadChannel thread, User user) {
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+                .setTitle("Support")
+                .setDescription("""
+                        **To get support you must first read the [wiki](https://modrepo.de/minecraft/voicechat/wiki) and the [FAQ](https://modrepo.de/minecraft/voicechat/faq).**
+                        Please make sure that you have read everything thoroughly and that your problem is certainly not covered there.
+                        If this is the case, please generate a support key [here](https://modrepo.de/minecraft/voicechat/wiki/support).
+                        After clicking the `Get Support!` button below this message you will be asked to enter the support key.
+                        """)
+                .addField("Important", "*By clicking the get support button, you agree that any logs you upload here will be uploaded to [mclo.gs](https://mclo.gs)!*", false)
+                .addField("Useful Links",
+                        String.join(" | ",
+                                "[Mod Description](https://modrinth.com/mod/simple-voice-chat)",
+                                "[FAQ](https://modrepo.de/minecraft/voicechat/faq)",
+                                "[Wiki](https://modrepo.de/minecraft/voicechat/wiki)",
+                                "[Downloads](https://modrepo.de/minecraft/voicechat/downloads)"
+                        ), false)
+                .setColor(Color.BLUE);
+
+        Button supportButton = Button.of(ButtonStyle.PRIMARY, BUTTON_SUPPORT_KEY, "Get Support!");
+        Button abortButton = Button.of(ButtonStyle.DANGER, BUTTON_ABORT_SUPPORT, "Nevermind...");
+
+        thread.sendMessageEmbeds(embedBuilder.build())
+                .addComponents(ActionRow.of(supportButton, abortButton))
+                .queue();
     }
 
-    private static void onConfirmAnswers(ServerThreadChannel thread, Thread t, ButtonClickEvent event) {
-        thread.getMessages(10).thenAccept(messages -> {
-            if (messages.stream().noneMatch(message -> message.getAuthor().getId() == t.getUser())) {
-                thread.sendMessage(
+    private static void onConfirmAnswers(ThreadChannel thread, Thread t, ButtonInteractionEvent event) {
+        thread.getHistory().retrievePast(10).queue(messages -> {
+            if (messages.stream()
+                    .noneMatch(msg -> msg.getAuthor().getIdLong() == t.getUser())) {
+                thread.sendMessageEmbeds(
                         new EmbedBuilder()
                                 .setTitle("No messages")
-                                .setDescription("""
-                                        No messages have been detected.
-                                        """)
+                                .setDescription("No messages have been detected.")
                                 .setColor(Color.RED)
-                ).thenAccept(message -> {
+                                .build()
+                ).queue(warningMsg -> {
                     Main.EXECUTOR.schedule(() -> {
-                        message.delete().exceptionally(new ExceptionHandler<>());
+                        ThreadChannel refreshedThread = Main.API.getThreadChannelById(thread.getIdLong());
+                        if (refreshedThread != null) {
+                            if (!refreshedThread.isLocked() && !refreshedThread.isArchived()) {
+                                warningMsg.delete().queue();
+                            }
+                        }
                     }, 10, TimeUnit.SECONDS);
-                }).exceptionally(new ExceptionHandler<>());
-                event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+                });
+
+                event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
                 return;
             }
-            event.getButtonInteraction().getMessage().createUpdater().removeAllComponents().applyChanges().thenAccept(message -> {
-                event.getButtonInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
-            }).exceptionally(new ExceptionHandler<>());
 
-            thread.sendMessage(
-                    new EmbedBuilder()
-                            .setTitle("Success")
-                            .setDescription("""
-                                    Staff will now be notified.
-                                     
-                                    Please note that timezones exist and people might not be available instantly.
-                                    """)
-                            .setColor(Color.GREEN),
-                    ActionRow.of(SupportThreadUtils.closeThreadButton())
-            ).exceptionally(new ExceptionHandler<>());
-            thread.createUpdater().setAutoArchiveDuration(AutoArchiveDuration.ONE_DAY).update().exceptionally(new ExceptionHandler<>());
+            event.getInteraction().editComponents(Collections.emptyList()).queue();
+
+            thread.sendMessageEmbeds(
+                            new EmbedBuilder()
+                                    .setTitle("Success")
+                                    .setDescription("""
+                                            Staff will now be notified.
+                                            
+                                            Please note that timezones exist and people might not be available instantly.
+                                            """)
+                                    .setColor(Color.GREEN)
+                                    .build()
+                    ).addComponents(ActionRow.of(SupportThreadUtils.closeThreadButton()))
+                    .queue();
+
+            thread.getManager()
+                    .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_24_HOURS)
+                    .queue();
+
             SupportThreadUtils.notifyStaff(thread, t);
-        }).exceptionally(new ExceptionHandler<>());
+        }, new ExceptionHandler());
     }
 
-    public static void onModalSubmit(ModalSubmitEvent event) {
-        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+    public static void onModalSubmit(ModalInteractionEvent event) {
+        ThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         if (thread == null) {
             return;
         }
         Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         if (t == null) {
-            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+            event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
             return;
         }
 
-        String id = event.getModalInteraction().getCustomId();
+        String id = event.getInteraction().getModalId();
         if (MODAL_SUPPORT_KEY.equals(id)) {
-            String value = event.getModalInteraction().getTextInputValueByCustomId(TEXT_FIELD_SUPPORT_KEY).orElse(null);
-            onSupportKeyProvided(thread, event.getModalInteraction(), value);
+            ModalMapping mapping = event.getValue(TEXT_FIELD_SUPPORT_KEY);
+            if (mapping == null) {
+                return;
+            }
+            onSupportKeyProvided(thread, event.getInteraction(), mapping.getAsString());
         }
     }
 
-    private static void onSupportKeyProvided(ServerThreadChannel thread, ModalInteraction modalInteraction, String supportKey) {
-        long userId = modalInteraction.getUser().getId();
+    private static void onSupportKeyProvided(ThreadChannel thread, ModalInteraction modalInteraction, String supportKey) {
         if (!SupportKey.verifySupportKey(supportKey)) {
-            modalInteraction.
-                    createImmediateResponder()
-                    .setContent("Invalid support key!")
-                    .setFlags(MessageFlag.EPHEMERAL)
-                    .respond()
-                    .exceptionally(new ExceptionHandler<>());
+            modalInteraction.reply("Invalid support key!")
+                    .setEphemeral(true).queue();
             return;
         }
-        modalInteraction.respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
-        thread.sendMessage(new EmbedBuilder().setDescription("The support key of <@%s> is `%s`.".formatted(userId, supportKey)).setColor(Color.GREEN)).exceptionally(new ExceptionHandler<>());
+        modalInteraction.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
+        thread.sendMessageEmbeds(new EmbedBuilder().setDescription("The support key of %s is `%s`.".formatted(modalInteraction.getUser().getAsMention(), supportKey)).setColor(Color.GREEN).build()).queue();
 
         clearAllComponents(thread).thenAccept(messages -> {
             sendSupportTemplateMessage(thread);
-        }).exceptionally(new ExceptionHandler<>());
+        }).exceptionally(throwable -> {
+            Main.LOGGER.error("Failed to clear all components", throwable);
+            return null;
+        });
     }
 
-    private static CompletableFuture<List<Message>> clearAllComponents(ServerThreadChannel thread) {
+    private static CompletableFuture<List<Message>> clearAllComponents(ThreadChannel thread) {
         List<CompletableFuture<Message>> futures = new ArrayList<>();
-        thread.getMessagesAsStream().forEach(message -> {
-            if (!message.getType().equals(MessageType.NORMAL)) {
+        thread.getIterableHistory().forEach(message -> {
+            if (message.getType() != MessageType.DEFAULT) {
                 return;
             }
-            if (message.getAuthor().getId() == Main.API.getClientId()) {
-                CompletableFuture<Message> future = message.createUpdater().removeAllComponents().applyChanges();
-                futures.add(future);
+            if (message.getAuthor().getIdLong() == thread.getJDA().getSelfUser().getIdLong()) {
+                futures.add(message.editMessageComponents(Collections.emptyList()).submit());
             }
         });
 
@@ -425,66 +464,71 @@ public class SupportThread {
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(ignored -> Collections.emptyList());
     }
 
-    private static void sendSupportTemplateMessage(ServerThreadChannel thread) {
-        SelectMenuBuilder selectMenuBuilder = new SelectMenuBuilder(ComponentType.SELECT_MENU_STRING, SELECT_MENU_ISSUE)
-                .setMinimumValues(1)
-                .setMaximumValues(1)
+    private static void sendSupportTemplateMessage(ThreadChannel thread) {
+        StringSelectMenu.Builder selectMenuBuilder = StringSelectMenu.create(SELECT_MENU_ISSUE)
+                .setMinValues(1)
+                .setMaxValues(1)
                 .setPlaceholder("Select issue");
 
         for (Issue issue : Issues.ISSUES) {
-            selectMenuBuilder.addOption(new SelectMenuOptionBuilder().setLabel(issue.getName()).setValue(issue.getId()).build());
+            selectMenuBuilder.addOptions(SelectOption.of(issue.getName(), issue.getId()));
         }
 
-        thread.sendMessage(
+        thread.sendMessageEmbeds(
                 new EmbedBuilder()
                         .setTitle("Select your issue")
                         .setDescription("Please select your issue from the menu below.")
-                        .setColor(Color.BLUE),
+                        .setColor(Color.BLUE)
+                        .build()
+        ).addComponents(
                 ActionRow.of(selectMenuBuilder.build()),
                 ActionRow.of(SupportThreadUtils.closeThreadButton())
-        ).exceptionally(new ExceptionHandler<>());
+        ).queue();
     }
 
-    public static void onSelectMenuChoose(SelectMenuChooseEvent event) {
-        ServerThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
+    public static void onSelectMenuChoose(StringSelectInteractionEvent event) {
+        ThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         if (thread == null) {
             return;
         }
         Thread t = SupportThreadUtils.getThreadIfOwner(event.getInteraction());
         if (t == null) {
-            event.getInteraction().respondLater().thenAccept(InteractionOriginalResponseUpdater::delete).exceptionally(new ExceptionHandler<>());
+            event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
             return;
         }
 
-        String customId = event.getSelectMenuInteraction().getCustomId();
-
-        if (!SELECT_MENU_ISSUE.equals(customId)) {
+        if (!SELECT_MENU_ISSUE.equals(event.getInteraction().getComponentId())) {
             return;
         }
-        List<SelectMenuOption> chosenOptions = event.getSelectMenuInteraction().getChosenOptions();
+        List<String> chosenOptions = event.getValues();
 
         if (chosenOptions.size() <= 0) {
             return;
         }
-        String selection = chosenOptions.get(0).getValue();
+
+        String selection = chosenOptions.get(0);
 
         clearAllComponents(thread).thenAccept(messages -> {
             Issue issue = Issues.byId(selection);
             if (issue == null) {
                 return;
             }
-            thread.sendMessage(new EmbedBuilder()
+            thread.sendMessageEmbeds(new EmbedBuilder()
                     .setTitle("`%s` selected.".formatted(issue.getName()))
                     .setDescription("""
                             Please provide additional information, so we can help you.
                             Once you did, you will get help by our team.
                             """)
                     .setColor(Color.GREEN)
+                    .build()
 
-            ).exceptionally(new ExceptionHandler<>());
+            ).queue();
             issue.onSelectIssue(thread);
             issue.sendQuestions(thread);
-        }).exceptionally(new ExceptionHandler<>());
+        }).exceptionally(throwable -> {
+            Main.LOGGER.error("Failed to clear all components", throwable);
+            return null;
+        });
     }
 
 }

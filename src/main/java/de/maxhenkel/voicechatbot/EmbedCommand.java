@@ -1,20 +1,20 @@
 package de.maxhenkel.voicechatbot;
 
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.MessageFlag;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.event.interaction.SlashCommandCreateEvent;
-import org.javacord.api.interaction.SlashCommandInteractionOption;
-import org.javacord.api.interaction.SlashCommandOption;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 
 import javax.annotation.Nullable;
 import java.awt.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.*;
 import java.util.Date;
-import java.util.List;
 
 public class EmbedCommand {
 
@@ -22,33 +22,28 @@ public class EmbedCommand {
 
     public static void init() {
         CommandRegistry.registerCommand(EMBED_COMMAND, "Sends an embed",
-                Collections.singletonList(SlashCommandOption.createStringOption(
-                        "embed",
-                        "The message",
-                        true
-                )),
+                Collections.singletonList(new OptionData(OptionType.STRING, "embed", "The message", true)),
                 EmbedCommand::onEmbedCommand,
-                PermissionType.ADMINISTRATOR
+                Permission.ADMINISTRATOR
         );
     }
 
-    private static void onEmbedCommand(SlashCommandCreateEvent event) {
-        List<SlashCommandInteractionOption> arguments = event.getSlashCommandInteraction().getArguments();
-        if (arguments.size() != 1) {
-            return;
-        }
-        String value = arguments.get(0).getStringValue().orElse(null);
-        if (value == null) {
+    private static void onEmbedCommand(SlashCommandInteractionEvent event) {
+        OptionMapping option = event.getOption("embed");
+        if (option == null) {
+            event.reply("Missing required input!").setEphemeral(true).queue();
             return;
         }
 
-        TextChannel channel = event.getSlashCommandInteraction().getChannel().orElse(null);
-        if (channel == null) {
-            return;
-        }
+        String value = option.getAsString().replace("\\n", "\n");
 
-        channel.sendMessage(parseEmbedString(value.replace("\\n", "\n")));
-        event.getSlashCommandInteraction().createImmediateResponder().setContent("Successfully created embed").setFlags(MessageFlag.EPHEMERAL).respond();
+        TextChannel channel = event.getChannel().asTextChannel();
+
+        EmbedBuilder embed = parseEmbedString(value.replace("\\n", "\n"));
+        channel.sendMessageEmbeds(embed.build()).queue(
+                success -> event.reply("Successfully created embed").setEphemeral(true).queue(),
+                error -> event.reply("Failed to send embed: " + error.getMessage()).setEphemeral(true).queue()
+        );
     }
 
     public static SimpleDateFormat[] DATE_FORMAT = new SimpleDateFormat[]{
@@ -87,10 +82,10 @@ public class EmbedCommand {
             } else if (entry.getKey().toLowerCase().contains("field")) {
                 String[] split = entry.getValue().split("\\|", 2);
                 if (split.length == 2) {
-                    builder.addField(split[0].strip(), split[1].strip());
+                    builder.addField(split[0].strip(), split[1].strip(), false);
                 }
             } else if (entry.getKey().toLowerCase().contains("timestamp-now")) {
-                builder.setTimestampToNow();
+                builder.setTimestamp(Instant.now());
             } else if (entry.getKey().toLowerCase().contains("timestamp")) {
                 Date date = null;
                 for (SimpleDateFormat sdf : DATE_FORMAT) {

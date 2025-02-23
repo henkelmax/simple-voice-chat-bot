@@ -3,14 +3,13 @@ package de.maxhenkel.voicechatbot;
 import com.google.gson.Gson;
 import de.maxhenkel.voicechatbot.db.Thread;
 import de.maxhenkel.voicechatbot.support.SupportThreadUtils;
-import org.javacord.api.entity.channel.ServerThreadChannel;
-import org.javacord.api.entity.message.MessageAttachment;
-import org.javacord.api.entity.message.MessageAuthor;
-import org.javacord.api.entity.message.component.ActionRow;
-import org.javacord.api.entity.message.component.ButtonBuilder;
-import org.javacord.api.entity.message.component.ButtonStyle;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.event.message.MessageCreateEvent;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 import java.awt.*;
 import java.io.ByteArrayInputStream;
@@ -22,6 +21,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -30,17 +30,17 @@ public class LogUploader {
 
     private static final String[] LOG_FILE_FORMATS = new String[]{"log", "txt", "gz"};
 
-    public static void onMessage(MessageCreateEvent event) {
-        ServerThreadChannel channel = SupportThreadUtils.getThread(event.getChannel());
+    public static void onMessage(MessageReceivedEvent event) {
+        ThreadChannel channel = SupportThreadUtils.getThread(event.getChannel());
         if (channel == null) {
             return;
         }
 
-        MessageAuthor messageAuthor = event.getMessageAuthor();
-        if (!messageAuthor.isRegularUser()) {
+        User messageAuthor = event.getAuthor();
+        if (messageAuthor.isBot() || messageAuthor.isSystem()) {
             return;
         }
-        Thread thread = Main.DB.getThread(channel.getId());
+        Thread thread = Main.DB.getThread(channel.getIdLong());
 
         if (thread == null) {
             return;
@@ -50,20 +50,23 @@ public class LogUploader {
             return;
         }
 
-        for (MessageAttachment attachment : event.getMessage().getAttachments()) {
+        for (Message.Attachment attachment : event.getMessage().getAttachments()) {
             String fileName = attachment.getFileName();
             String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
 
             if (Arrays.stream(LOG_FILE_FORMATS).anyMatch(s -> s.equalsIgnoreCase(extension))) {
-                attachment.asByteArray().thenAccept(bytes -> {
-                    onLog(attachment, bytes, fileName, extension);
+                attachment.getProxy().download().thenAccept(inputStream -> {
+                    try {
+                        onLog(channel, event.getMessage(), attachment, inputStream.readAllBytes(), fileName, extension);
+                    } catch (IOException e) {
+                        Main.LOGGER.error("Failed to read log file", e);
+                    }
                 });
-
             }
         }
     }
 
-    private static void onLog(MessageAttachment attachment, byte[] data, String fileName, String extension) {
+    private static void onLog(ThreadChannel channel, Message message, Message.Attachment attachment, byte[] data, String fileName, String extension) {
         String content;
         if (extension.equalsIgnoreCase("gz")) {
             try (GZIPInputStream gzipInputStream = new GZIPInputStream(new ByteArrayInputStream(data))) {
@@ -78,16 +81,15 @@ public class LogUploader {
 
         try {
             String url = upload(content);
-            attachment.getMessage().getChannel().sendMessage(new EmbedBuilder()
-                            .setTitle("Log uploaded to mclo.gs")
-                            .setFooter("Uploaded by %s".formatted(attachment.getMessage().getAuthor().getDisplayName()))
-                            .setAuthor(attachment.getMessage().getAuthor())
-                            .setTimestampToNow()
-                            .setColor(Color.GREEN),
-                    ActionRow.of(
-                            new ButtonBuilder().setUrl(url).setLabel("View logs").setStyle(ButtonStyle.LINK).build()
-                    )
-            );
+            channel.sendMessageEmbeds(new EmbedBuilder()
+                    .setTitle("Log uploaded to mclo.gs")
+                    .setFooter("Uploaded by %s".formatted(message.getAuthor().getName()))
+                    .setAuthor(message.getAuthor().getName())
+                    .setTimestamp(Instant.now())
+                    .setColor(Color.GREEN).build()
+            ).addComponents(ActionRow.of(
+                    Button.link(url, "View logs")
+            )).queue();
         } catch (Exception e) {
             Main.LOGGER.error("Failed to upload log file", e);
         }
@@ -125,7 +127,7 @@ public class LogUploader {
     private static HttpRequest.BodyPublisher ofFormData(Map<Object, Object> data) {
         var builder = new StringBuilder();
         for (Map.Entry<Object, Object> entry : data.entrySet()) {
-            if (builder.length() > 0) {
+            if (!builder.isEmpty()) {
                 builder.append("&");
             }
             builder.append(URLEncoder.encode(entry.getKey().toString(), StandardCharsets.UTF_8));

@@ -1,14 +1,13 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
+import de.maxhenkel.voicechatbot.ExceptionHandler;
 import de.maxhenkel.voicechatbot.Main;
 import de.maxhenkel.voicechatbot.support.SupportThread;
 import de.maxhenkel.voicechatbot.support.SupportThreadUtils;
-import org.javacord.api.entity.channel.ServerThreadChannel;
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.component.ActionRow;
-import org.javacord.api.entity.message.component.ButtonBuilder;
-import org.javacord.api.entity.message.component.ButtonStyle;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -52,28 +51,27 @@ public class BaseIssue implements Issue {
     }
 
     @Override
-    public void onSelectIssue(TextChannel textChannel) {
+    public void onSelectIssue(ThreadChannel textChannel) {
 
     }
 
     @Override
-    public void sendQuestions(ServerThreadChannel thread) {
-        thread.sendMessage(new EmbedBuilder()
-                        .setTitle("Please answer the following questions")
-                        .setDescription("""
-                                You can just send the answers as normal text messages in this thread.
-                                                                    
-                                %s
-                                                                    
-                                **Once you answered every question, confirm them by pressing the `Confirm` button.**
-                                """.formatted(getQuestions().stream().map("⦁ %s"::formatted).collect(Collectors.joining("\n"))))
-                        .setColor(Color.BLUE),
-                ActionRow.of(
-                        SupportThreadUtils.closeThreadButton(),
-                        new ButtonBuilder().setCustomId(SupportThread.BUTTON_CONFIRM_ANSWERS).setLabel("Confirm").setStyle(ButtonStyle.SUCCESS).build()
-                )
-        ).thenAccept(message -> {
-            Main.DB.unlockThread(thread.getId());
-        });
+    public void sendQuestions(ThreadChannel thread) {
+        thread.sendMessageEmbeds(new EmbedBuilder()
+                .setTitle("Please answer the following questions")
+                .setDescription("""
+                        You can just send the answers as normal text messages in this thread.
+                        
+                        %s
+                        
+                        **Once you answered every question, confirm them by pressing the `Confirm` button.**
+                        """.formatted(getQuestions().stream().map("⦁ %s"::formatted).collect(Collectors.joining("\n"))))
+                .setColor(Color.BLUE).build()
+        ).addComponents(ActionRow.of(
+                SupportThreadUtils.closeThreadButton(),
+                Button.success(SupportThread.BUTTON_CONFIRM_ANSWERS, "Confirm")
+        )).queue(message -> {
+            Main.DB.unlockThread(thread.getIdLong());
+        }, new ExceptionHandler());
     }
 }

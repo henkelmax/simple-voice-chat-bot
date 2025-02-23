@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 
 import java.awt.*;
 import java.util.List;
@@ -23,16 +23,16 @@ public class NotConnectedIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(TextChannel textChannel) {
-        textChannel.sendMessage(new EmbedBuilder()
+    public void onSelectIssue(ThreadChannel textChannel) {
+        textChannel.sendMessageEmbeds(new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         If you are hosting your server with a Minecraft hosting provider, please do the following:
-                                                    
+                        
                         ⦁ Go to [this page](https://modrepo.de/minecraft/voicechat/wiki/server_setup_mc_hosting) and look if a guide for your hoster exists
                         ⦁ If there is no guide for your hoster, please **contact the support of your hoster**
                         ⦁ If you found a guide for your hoster but it doesn't work, please also contact your hoster first
-                                                    
+                        
                         **We can't help you with the configuration for specific Minecraft hosters! Please always contact their support first!**
                         
                         You should also know that we generally don't support hybrid servers like Mohist or Magma.
@@ -41,6 +41,7 @@ public class NotConnectedIssue extends BaseIssue {
                         Tools like ngrok also won't work, since they only support TCP.
                         """)
                 .setColor(Color.RED)
-        );
+                .build()
+        ).queue();
     }
 }

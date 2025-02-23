@@ -1,11 +1,10 @@
 package de.maxhenkel.voicechatbot;
 
-import java.util.function.Function;
+import java.util.function.Consumer;
 
-public class ExceptionHandler<T> implements Function<Throwable, T> {
-
+public class ExceptionHandler implements Consumer<Throwable> {
     @Override
-    public T apply(Throwable e) {
+    public void accept(Throwable e) {
         for (StackTraceElement element : e.getStackTrace()) {
             if (element.getClassName().contains("CompletableFuture")) {
                 continue;
@@ -13,8 +12,6 @@ public class ExceptionHandler<T> implements Function<Throwable, T> {
             Main.LOGGER.error("{}:{}: {}", element.getClassName(), element.getLineNumber(), e.getMessage());
             break;
         }
-
-        return null;
     }
 
 }

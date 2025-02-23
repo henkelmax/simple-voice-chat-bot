@@ -1,8 +1,7 @@
 package de.maxhenkel.voicechatbot;
 
-import org.javacord.api.entity.channel.ServerThreadChannel;
-import org.javacord.api.entity.message.MessageFlag;
-import org.javacord.api.event.interaction.SlashCommandCreateEvent;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 public class ThreadsCommand {
 
@@ -14,28 +13,29 @@ public class ThreadsCommand {
         );
     }
 
-    private static void onThreadsCommand(SlashCommandCreateEvent event) {
+    private static void onThreadsCommand(SlashCommandInteractionEvent event) {
         StringBuilder sb = new StringBuilder();
         Main.DB.getThreads(t -> {
             if (t.getNotifyMessage() <= 0L) {
                 return;
             }
-            ServerThreadChannel thread = Main.API.getServerThreadChannelById(t.getThread()).orElse(null);
+            ThreadChannel thread = Main.API.getThreadChannelById(t.getThread());
             if (thread == null) {
                 return;
             }
             sb.append("<#%s>".formatted(thread.getId()));
-            if (thread.getMembers().stream().anyMatch(threadMember -> threadMember.getUserId() == event.getInteraction().getUser().getId())) {
+            if (thread.getMembers().stream().anyMatch(threadMember -> threadMember.getIdLong() == event.getInteraction().getUser().getIdLong())) {
                 sb.append(" ✅");
             }
             sb.append("\n");
         });
 
         if (sb.isEmpty()) {
-            event.getSlashCommandInteraction().createImmediateResponder().setContent("No open threads").setFlags(MessageFlag.EPHEMERAL).respond();
+            event.getInteraction().reply("No open threads").setEphemeral(true).queue();
+            return;
         }
 
-        event.getSlashCommandInteraction().createImmediateResponder().setContent(sb.toString()).setFlags(MessageFlag.EPHEMERAL).respond();
+        event.getInteraction().reply(sb.toString()).setEphemeral(true).queue();
     }
 
 }

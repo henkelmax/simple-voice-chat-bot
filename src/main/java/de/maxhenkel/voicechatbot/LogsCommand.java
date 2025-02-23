@@ -1,9 +1,8 @@
 package de.maxhenkel.voicechatbot;
 
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
-import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.event.interaction.SlashCommandCreateEvent;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 public class LogsCommand {
 
@@ -12,31 +11,23 @@ public class LogsCommand {
     public static void init() {
         CommandRegistry.registerCommand(LOGS_COMMAND, "Tells a user how to get logs",
                 LogsCommand::onLogsCommand,
-                PermissionType.MODERATE_MEMBERS
+                Permission.MODERATE_MEMBERS
         );
     }
 
-    private static void onLogsCommand(SlashCommandCreateEvent event) {
-        TextChannel channel = event.getSlashCommandInteraction().getChannel().orElse(null);
-        if (channel == null) {
-            return;
-        }
+    private static void onLogsCommand(SlashCommandInteractionEvent event) {
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setTitle("How to get logs");
+        builder.setDescription("""
+                **Client Logs**
+                On the client your logs are located in `.minecraft/logs/latest.log`.
+                
+                **Server Logs**
+                On the server your logs are located in your Minecraft server directory in `logs/latest.log`.
+                """);
+        builder.setUrl("https://modrepo.de/minecraft/how_to_get_logs");
 
-        event.getSlashCommandInteraction().respondLater().thenAccept(responseUpdater -> {
-            EmbedBuilder builder = new EmbedBuilder();
-            builder.setTitle("How to get logs");
-            builder.setDescription("""
-                    **Client Logs**
-                    On the client your logs are located in `.minecraft/logs/latest.log`.
-                                        
-                    **Server Logs**
-                    On the server your logs are located in your Minecraft server directory in `logs/latest.log`.
-                    """);
-            builder.setUrl("https://modrepo.de/minecraft/how_to_get_logs");
-            channel.sendMessage(builder);
-            responseUpdater.delete().exceptionally(new ExceptionHandler<>());
-
-        }).exceptionally(new ExceptionHandler<>());
+        event.getInteraction().replyEmbeds(builder.build()).queue();
     }
 
 }

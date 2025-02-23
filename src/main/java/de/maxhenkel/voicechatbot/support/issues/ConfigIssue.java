@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 
 import java.awt.*;
 
@@ -12,8 +12,8 @@ public class ConfigIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(TextChannel textChannel) {
-        textChannel.sendMessage(new EmbedBuilder()
+    public void onSelectIssue(ThreadChannel textChannel) {
+        textChannel.sendMessageEmbeds(new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         While editing configuration files, make sure the client/server is stopped.
@@ -22,9 +22,10 @@ public class ConfigIssue extends BaseIssue {
                         
                         If you are using an older version of the mod (older than 2.4.0) read [this](https://modrepo.de/minecraft/voicechat/wiki/old_configuration).
                         """)
-                .addField("Fabric/Forge/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`")
-                .addField("Bukkit/Spigot/Paper config location", "`plugins/voicechat/voicechat-server.properties`")
+                .addField("Fabric/Forge/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`", false)
+                .addField("Bukkit/Spigot/Paper config location", "`plugins/voicechat/voicechat-server.properties`", false)
                 .setColor(Color.RED)
-        );
+                .build()
+        ).queue();
     }
 }

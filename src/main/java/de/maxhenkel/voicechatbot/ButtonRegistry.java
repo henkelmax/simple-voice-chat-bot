@@ -1,9 +1,12 @@
 package de.maxhenkel.voicechatbot;
 
-import org.javacord.api.listener.interaction.ButtonClickListener;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class ButtonRegistry {
 
@@ -11,25 +14,27 @@ public class ButtonRegistry {
 
     public static void init() {
         Main.LOGGER.info("Initializing button registry");
-        Main.API.addButtonClickListener(buttonClickEvent -> {
-            String customId = buttonClickEvent.getButtonInteraction().getCustomId();
-            Button button = buttons.get(customId);
-            if (button == null) {
-                Main.LOGGER.info("Could not find registered button with ID '{}'", customId);
-                return;
+        Main.API.addEventListener(new ListenerAdapter() {
+            @Override
+            public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
+                Button button = buttons.get(event.getComponentId());
+                if (button == null) {
+                    Main.LOGGER.info("Could not find registered button with ID '{}'", event.getComponentId());
+                    return;
+                }
+                button.listener.accept(event);
             }
-            button.listener.onButtonClick(buttonClickEvent);
         });
     }
 
-    public static void registerButton(String id, ButtonClickListener listener) {
+    public static void registerButton(String id, Consumer<ButtonInteractionEvent> listener) {
         if (buttons.containsKey(id)) {
             throw new IllegalStateException("Button with ID '%s' already registered".formatted(id));
         }
         buttons.put(id, new Button(id, listener));
     }
 
-    private record Button(String id, ButtonClickListener listener) {
+    private record Button(String id, Consumer<ButtonInteractionEvent> listener) {
     }
 
 }

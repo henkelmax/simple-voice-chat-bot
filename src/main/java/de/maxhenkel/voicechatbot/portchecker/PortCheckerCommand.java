@@ -1,14 +1,15 @@
 package de.maxhenkel.voicechatbot.portchecker;
 
 import de.maxhenkel.voicechatbot.CommandRegistry;
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.event.interaction.SlashCommandCreateEvent;
-import org.javacord.api.interaction.SlashCommandInteractionOption;
-import org.javacord.api.interaction.SlashCommandOption;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 
 import java.util.Collections;
-import java.util.List;
 
 public class PortCheckerCommand {
 
@@ -16,32 +17,23 @@ public class PortCheckerCommand {
 
     public static void init() {
         CommandRegistry.registerCommand(PORT_CHECKER_COMMAND, "Pings a voice chat server",
-                Collections.singletonList(SlashCommandOption.createStringOption(
-                        "url",
-                        "The voice chat server url",
-                        true
-                )),
+                Collections.singletonList(new OptionData(OptionType.STRING, "url", "The voice chat server url", true)),
                 PortCheckerCommand::onCheckPort,
-                PermissionType.MODERATE_MEMBERS
+                Permission.MODERATE_MEMBERS
         );
     }
 
-    private static void onCheckPort(SlashCommandCreateEvent event) {
-        List<SlashCommandInteractionOption> arguments = event.getSlashCommandInteraction().getArguments();
-        if (arguments.size() != 1) {
-            return;
-        }
-        String value = arguments.get(0).getStringValue().orElse(null);
-        if (value == null) {
+    private static void onCheckPort(SlashCommandInteractionEvent event) {
+        OptionMapping option = event.getOption("url");
+        if (option == null) {
+            event.reply("Missing required input!").setEphemeral(true).queue();
             return;
         }
 
-        TextChannel channel = event.getSlashCommandInteraction().getChannel().orElse(null);
-        if (channel == null) {
-            return;
-        }
+        String value = option.getAsString();
+        TextChannel channel = event.getInteraction().getChannel().asTextChannel();
 
-        event.getSlashCommandInteraction().createImmediateResponder().respond();
+        event.deferReply(true).flatMap(InteractionHook::deleteOriginal).queue();
         PortChecker.checkPort(channel, value);
     }
 

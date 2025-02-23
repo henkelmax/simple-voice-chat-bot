@@ -3,7 +3,7 @@ package de.maxhenkel.voicechatbot.portchecker;
 import de.maxhenkel.voicechatbot.Environment;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.javacord.api.entity.channel.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 
 import java.io.IOException;
 import java.net.*;

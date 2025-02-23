@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
-import org.javacord.api.entity.channel.TextChannel;
-import org.javacord.api.entity.message.embed.EmbedBuilder;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 
 import java.awt.*;
 import java.util.List;
@@ -21,8 +21,8 @@ public class NoPermissionsIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(TextChannel textChannel) {
-        textChannel.sendMessage(new EmbedBuilder()
+    public void onSelectIssue(ThreadChannel textChannel) {
+        textChannel.sendMessageEmbeds(new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         Please make sure you granted the following permissions for every player:
@@ -30,7 +30,7 @@ public class NoPermissionsIssue extends BaseIssue {
                         ⦁ `voicechat.listen`
                         ⦁ `voicechat.speak`
                         ⦁ `voicechat.groups`
-                                                
+                        
                         If you don't know how to grant permissions for your permissions mod/plugin, please contact their support.
                         We can't help you with the setup of other mods.
                         
@@ -40,6 +40,7 @@ public class NoPermissionsIssue extends BaseIssue {
                         Read [this](https://essentialsx.net/do-not-use-mohist.html) for more information.
                         """)
                 .setColor(Color.RED)
-        );
+                .build()
+        ).queue();
     }
 }
