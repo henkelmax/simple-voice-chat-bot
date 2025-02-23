@@ -1,10 +1,10 @@
-FROM maven:3.8-eclipse-temurin-17-alpine as builder
+FROM maven:3.9.9-eclipse-temurin-21-alpine as builder
 
 COPY . .
 
 RUN mvn install
 
-FROM openjdk:17-jdk-slim
+FROM openjdk:21-jdk-slim
 
 RUN mkdir /bot
 
