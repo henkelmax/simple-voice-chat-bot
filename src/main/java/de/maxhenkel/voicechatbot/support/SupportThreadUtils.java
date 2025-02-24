@@ -1,6 +1,5 @@
 package de.maxhenkel.voicechatbot.support;
 
-import de.maxhenkel.voicechatbot.Date;
 import de.maxhenkel.voicechatbot.Environment;
 import de.maxhenkel.voicechatbot.ExceptionHandler;
 import de.maxhenkel.voicechatbot.Main;
@@ -15,6 +14,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.interactions.Interaction;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.utils.TimeFormat;
 
 import javax.annotation.Nullable;
 import java.awt.*;
@@ -196,7 +196,7 @@ public class SupportThreadUtils {
                         embed.addField(field);
                     }
 
-                    embed.addField("Update %s UTC".formatted(Date.currentDate()), message, false);
+                    embed.addField("Update %s".formatted(TimeFormat.DATE_TIME_SHORT.format(Instant.now())), message, false);
                     msg.editMessageEmbeds(embed.build()).queue();
                 }, new ExceptionHandler());
     }
