@@ -81,6 +81,7 @@ public class Main {
         QuestionCommand.init();
         LogsCommand.init();
         PortCheckerCommand.init();
+        VersionCommand.init();
 
         CommandRegistry.applyCommands();
 
