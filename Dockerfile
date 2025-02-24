@@ -11,7 +11,7 @@ RUN mkdir /bot
 COPY --from=builder target/simple-voice-chat-bot.jar /bot/simple-voice-chat-bot.jar
 
 ENV TOKEN=""
-ENV DATABASE_PATH="database.db"
+ENV DB_PATH="database.db"
 ENV SUPPORT_CHANNEL_ID="0"
 ENV SUPPORT_NOTIFICATION_CHANNEL="0"
 ENV SUPPORT_LOG_CHANNEL="0"
