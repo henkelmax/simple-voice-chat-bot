@@ -143,6 +143,7 @@ public class SupportThreadUtils {
 
         EmbedBuilder embed = new EmbedBuilder()
                 .setTitle("New Support Request")
+                .addField("Time", TimeFormat.DATE_TIME_SHORT.format(Instant.now()), false)
                 .addField("User", "<@%s>".formatted(t.getUser()), false)
                 .addField("Thread", thread.getAsMention(), false)
                 .setTimestamp(Instant.now())
