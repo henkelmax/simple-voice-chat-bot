@@ -16,6 +16,8 @@ public class CrashIssue extends BaseIssue {
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
         questions.add("Did the crash occur on the client or the server?");
+        questions.add("Does this crash happen consistently and is reproducible?");
+        questions.add("Does this crash happen without any other mods/plugins installed?");
         return questions;
     }
 
@@ -24,9 +26,9 @@ public class CrashIssue extends BaseIssue {
         textChannel.sendMessageEmbeds(new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
-                        If you encountered a crash, please provide log files of both your client and server!
+                        If you encountered a crash, please provide log files of both your client and the server!
                         
-                        Please send both logs as a file in this channel.
+                        Please send the logs as a `.log` file in this channel.
                         """)
                 .addField("Client logs", "`.minecraft/logs/latest.log`", false)
                 .addField("Server logs", "`logs/latest.log`", false)
