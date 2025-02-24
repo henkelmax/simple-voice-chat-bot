@@ -1,36 +1,28 @@
 package de.maxhenkel.voicechatbot.db;
 
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.dao.DaoManager;
+import com.j256.ormlite.jdbc.JdbcConnectionSource;
+import com.j256.ormlite.support.ConnectionSource;
+import com.j256.ormlite.table.TableUtils;
 import de.maxhenkel.voicechatbot.Environment;
-import org.bson.codecs.configuration.CodecRegistries;
-import org.bson.codecs.configuration.CodecRegistry;
+import de.maxhenkel.voicechatbot.Main;
 
 import javax.annotation.Nullable;
+import java.sql.SQLException;
+import java.util.List;
 import java.util.function.Consumer;
-
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Updates.set;
 
 public class Database {
 
-    private final MongoClient mongoClient;
-    private final MongoDatabase database;
-    private final MongoCollection<Thread> threads;
+    private final ConnectionSource connectionSource;
+    private final Dao<Thread, Long> threads;
 
-    public Database() {
-        CodecRegistry registry = CodecRegistries.fromRegistries(CodecRegistries.fromCodecs(new Thread.ThreadCodec()), MongoClientSettings.getDefaultCodecRegistry());
-        MongoClientSettings settings = MongoClientSettings.builder()
-                .applyConnectionString(new ConnectionString("mongodb://%s".formatted(Environment.DATABASE_URL)))
-                .codecRegistry(registry)
-                .build();
-        mongoClient = MongoClients.create(settings);
-        database = mongoClient.getDatabase(Environment.DATABASE_NAME);
-        threads = database.getCollection("threads", Thread.class);
+    public Database() throws SQLException {
+        connectionSource = new JdbcConnectionSource("jdbc:sqlite:%s".formatted(Environment.DATABASE_PATH));
+
+        TableUtils.createTableIfNotExists(connectionSource, Thread.class);
+        threads = DaoManager.createDao(connectionSource, Thread.class);
     }
 
     public boolean addThread(Thread thread) {
@@ -40,42 +32,84 @@ public class Database {
         if (getThread(thread.getThread()) != null) {
             return false;
         }
-        threads.insertOne(thread);
-        return true;
+        try {
+            threads.create(thread);
+            return true;
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to add thread", e);
+            return false;
+        }
     }
 
     public boolean removeThread(long threadId) {
-        return threads.deleteMany(eq("thread", threadId)).getDeletedCount() > 0;
-    }
-
-    public boolean removeThreadByUser(long userId) {
-        return threads.deleteMany(eq("user", userId)).getDeletedCount() > 0;
+        try {
+            threads.deleteById(threadId);
+            return true;
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to remove thread", e);
+            return false;
+        }
     }
 
     @Nullable
     public Thread getThreadByUser(long userId) {
-        return threads.find(eq("user", userId), Thread.class).first();
+        try {
+            List<Thread> t = threads.queryForEq("user", userId);
+            return t.isEmpty() ? null : t.getFirst();
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to get thread by user", e);
+            return null;
+        }
     }
 
     @Nullable
     public Thread getThread(long threadId) {
-        return threads.find(eq("thread", threadId), Thread.class).first();
+        try {
+            return threads.queryForId(threadId);
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to get thread", e);
+            return null;
+        }
     }
 
-    public void unlockUsersThread(long userId) {
-        threads.findOneAndUpdate(eq("user", userId), set("unlocked", true));
+    public boolean unlockThread(long threadId) {
+        Thread t = getThread(threadId);
+        if (t == null) {
+            return false;
+        }
+        t.setUnlocked(true);
+        try {
+            threads.update(t);
+            return true;
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to unlock thread", e);
+            return false;
+        }
     }
 
-    public void unlockThread(long threadId) {
-        threads.findOneAndUpdate(eq("thread", threadId), set("unlocked", true));
+    public boolean setNotifyMessage(long threadId, long notifyMessage) {
+        Thread t = getThread(threadId);
+        if (t == null) {
+            return false;
+        }
+        t.setNotifyMessage(notifyMessage);
+        try {
+            threads.update(t);
+            return true;
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to set notify message", e);
+            return false;
+        }
     }
 
-    public void setNotifyMessage(long threadId, long notifyMessage) {
-        threads.findOneAndUpdate(eq("thread", threadId), set("notifyMessage", notifyMessage));
-    }
-
-    public void getThreads(Consumer<Thread> threadConsumer) {
-        threads.find(Thread.class).forEach(threadConsumer);
+    public boolean getThreads(Consumer<Thread> threadConsumer) {
+        try {
+            threads.queryForAll().forEach(threadConsumer);
+            return true;
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to get threads", e);
+            return false;
+        }
     }
 
 }
