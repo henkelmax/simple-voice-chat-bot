@@ -15,11 +15,11 @@ public class NotConnectedIssue extends BaseIssue {
     @Override
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
-        questions.add("What server software are you using? *(Fabric/Forge/Bukkit/Spigot/Paper etc)*");
-        questions.add("Are you using a proxy server? *(Bungeecord/Waterfall/Velocity etc)*");
+        questions.add("What server software are you using? *(Fabric, Forge, Bukkit, Spigot, Paper etc.)*");
+        questions.add("Are you using a proxy server? *(Bungeecord, Waterfall, Velocity etc.)*");
         questions.add("Are you using any DDoS protection? *(TCPShield etc)*");
-        questions.add("Where are you hosting your server? *(Bloom/Aternos/Own PC/VPS etc)*");
-        questions.add("Are you using any tunneling service/mod or VPN? *(playit.gg, e4mc, ngrok, ZeroTier, Radmin, Hamachi etc)*");
+        questions.add("Where are you hosting your server? *(Bloom, Aternos, Own PC, VPS etc.)*");
+        questions.add("Are you using any tunneling service/mod or VPN? *(playit.gg, e4mc, ngrok, ZeroTier, Radmin, Hamachi etc.)*");
         return questions;
     }
 
