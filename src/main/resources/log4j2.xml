@@ -13,9 +13,6 @@
         </RollingRandomAccessFile>
     </Appenders>
     <Loggers>
-        <Logger name="org.javacord" level="error" additivity="false">
-            <AppenderRef ref="LogToRollingFile"/>
-        </Logger>
         <Root level="debug">
             <AppenderRef ref="LogToConsole"/>
             <AppenderRef ref="LogToRollingFile"/>
