@@ -19,6 +19,7 @@ public class NotConnectedIssue extends BaseIssue {
         questions.add("Are you using a proxy server? *(Bungeecord/Waterfall/Velocity etc)*");
         questions.add("Are you using any DDoS protection? *(TCPShield etc)*");
         questions.add("Where are you hosting your server? *(Bloom/Aternos/Own PC/VPS etc)*");
+        questions.add("Are you using any tunneling service/mod or VPN? *(playit.gg, e4mc, ngrok, ZeroTier, Radmin, Hamachi etc)*");
         return questions;
     }
 
@@ -28,17 +29,15 @@ public class NotConnectedIssue extends BaseIssue {
                 .setTitle("Disclaimer")
                 .setDescription("""
                         If you are hosting your server with a Minecraft hosting provider, please do the following:
+                        - Visit [this page](https://modrepo.de/minecraft/voicechat/wiki/server_setup_mc_hosting) to see if instructions exist for your specific hoster.
+                        - **If no guide is available**, reach out to your hosting providers support team directly for assistance.
+                        - **If the guide doesn't work**, contact your hosters support team first to resolve the issue.
                         
-                        ⦁ Go to [this page](https://modrepo.de/minecraft/voicechat/wiki/server_setup_mc_hosting) and look if a guide for your hoster exists
-                        ⦁ If there is no guide for your hoster, please **contact the support of your hoster**
-                        ⦁ If you found a guide for your hoster but it doesn't work, please also contact your hoster first
-                        
-                        **We can't help you with the configuration for specific Minecraft hosters! Please always contact their support first!**
-                        
-                        You should also know that we generally don't support hybrid servers like Mohist or Magma.
-                        Read [this](https://essentialsx.net/do-not-use-mohist.html) for more information.
-                        
-                        Tools like ngrok also won't work, since they only support TCP.
+                        **Important Notes**:
+                        - We cannot assist with configuration or port setup for individual hosting providers. Due to the unique requirements of each service, please contact your hosters support team directly for guidance.
+                        - **Hybrid servers** (e.g., Mohist, Magma, Arclight) are not officially supported due to compatibility and stability risks. [Learn why here](https://essentialsx.net/do-not-use-mohist.html).
+                        - **Tunneling services** (e.g., playit.gg, e4mc, ngrok, Localtonet) and **VPNs** (e.g., ZeroTier, Radmin, Hamachi) are not officially supported, as these setups are overly complex, require advanced technical expertise, and are prone to configuration errors.
+                        - For reliable performance, always configure port forwarding directly through your hosting provider or router instead of relying on solutions like tunneling services or VPNs.
                         """)
                 .setColor(Color.RED)
                 .build()
