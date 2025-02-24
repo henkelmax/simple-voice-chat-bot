@@ -87,6 +87,9 @@ public class Main {
 
         EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
 
+        LOGGER.info("Sending startup message");
+        StartupInfo.logStarted();
+
         LOGGER.info("Successfully initialized");
     }
 
