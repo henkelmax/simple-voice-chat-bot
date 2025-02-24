@@ -15,8 +15,9 @@ public class MicNotWorkingIssue extends BaseIssue {
     @Override
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
-        questions.add("Which operating system are you using? *(Windows/MacOS/Linux)*");
-        questions.add("Which operating system version are you using? (MacOS 14/Windows 11 etc)");
+        questions.add("Which launcher are you using? *(Vanilla Launcher, Prism Launcher, CurseForge Launcher, ATLauncher etc.)*");
+        questions.add("Which operating system are you using? *(Windows, MacOS, Linux etc.)*");
+        questions.add("Which operating system version are you using? (MacOS 14, Windows 11 etc.)");
         return questions;
     }
 
