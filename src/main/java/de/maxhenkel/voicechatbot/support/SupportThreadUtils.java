@@ -64,30 +64,45 @@ public class SupportThreadUtils {
     @Nullable
     public static Thread getThread(long user) {
         Thread thread = Main.DB.getThreadByUser(user);
-
-        if (thread == null) {
+        if (!checkThreadCleanup(thread)) {
             return null;
+        }
+        return thread;
+    }
+
+    @Nullable
+    public static Thread getThreadFromThreadId(long threadId) {
+        Thread thread = Main.DB.getThread(threadId);
+        if (!checkThreadCleanup(thread)) {
+            return null;
+        }
+        return thread;
+    }
+
+    private static boolean checkThreadCleanup(@Nullable Thread thread) {
+        if (thread == null) {
+            return false;
         }
 
         ThreadChannel threadChannel = Main.API.getThreadChannelById(thread.getThread());
         if (threadChannel == null) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it doesn't exist anymore", thread.getThread(), thread.getUser());
-            return null;
+            return false;
         }
 
         if (!isSupportThreadChannel(threadChannel.getParentMessageChannel())) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it was not a child of the support channel", thread.getThread(), thread.getUser());
-            return null;
+            return false;
         }
 
         if (threadChannel.isLocked()) {
             Main.DB.removeThread(thread.getThread());
             Main.LOGGER.info("Removed thread {} of user {} as it was locked", thread.getThread(), thread.getUser());
-            return null;
+            return false;
         }
-        return thread;
+        return true;
     }
 
     public static boolean isStaff(@Nullable Member member) {

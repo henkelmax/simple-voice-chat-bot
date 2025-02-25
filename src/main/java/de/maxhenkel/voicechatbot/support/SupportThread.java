@@ -6,6 +6,7 @@ import de.maxhenkel.voicechatbot.support.issues.Issue;
 import de.maxhenkel.voicechatbot.support.issues.Issues;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageType;
 import net.dv8tion.jda.api.entities.User;
@@ -16,6 +17,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.thread.member.ThreadMemberJoinEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -529,6 +531,19 @@ public class SupportThread {
             Main.LOGGER.error("Failed to clear all components", throwable);
             return null;
         });
+    }
+
+    public static void onThreadMemberJoin(ThreadMemberJoinEvent event) {
+        ThreadChannel threadChannel = event.getThread();
+        Thread thread = SupportThreadUtils.getThreadFromThreadId(threadChannel.getIdLong());
+        if (thread == null) {
+            return;
+        }
+        Member member = event.getMember();
+        if (!SupportThreadUtils.isStaff(member)) {
+            return;
+        }
+        SupportThreadUtils.updateStaffNotification(thread, "%S joined ✅".formatted(member.getAsMention()));
     }
 
 }

@@ -11,6 +11,7 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.thread.member.ThreadMemberJoinEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.apache.logging.log4j.LogManager;
@@ -71,6 +72,11 @@ public class Main {
             @Override
             public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
                 CommandRegistry.onCommand(event);
+            }
+
+            @Override
+            public void onThreadMemberJoin(@NotNull ThreadMemberJoinEvent event) {
+                SupportThread.onThreadMemberJoin(event);
             }
         });
 
