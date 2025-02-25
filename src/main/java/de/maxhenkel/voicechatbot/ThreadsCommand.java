@@ -1,7 +1,10 @@
 package de.maxhenkel.voicechatbot;
 
+import de.maxhenkel.voicechatbot.db.Thread;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+
+import java.util.Collection;
 
 public class ThreadsCommand {
 
@@ -15,7 +18,12 @@ public class ThreadsCommand {
 
     private static void onThreadsCommand(SlashCommandInteractionEvent event) {
         StringBuilder sb = new StringBuilder();
-        Main.DB.getThreads(t -> {
+        Collection<Thread> threads = Main.DB.getThreads();
+        if (threads == null) {
+            event.getInteraction().reply("Failed to get threads").setEphemeral(true).queue();
+            return;
+        }
+        for (Thread t : threads) {
             if (t.getNotifyMessage() <= 0L) {
                 return;
             }
@@ -28,7 +36,7 @@ public class ThreadsCommand {
                 sb.append(" ✅");
             }
             sb.append("\n");
-        });
+        }
 
         if (sb.isEmpty()) {
             event.getInteraction().reply("No open threads").setEphemeral(true).queue();

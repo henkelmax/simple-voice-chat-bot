@@ -10,8 +10,8 @@ import de.maxhenkel.voicechatbot.Main;
 
 import javax.annotation.Nullable;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class Database {
 
@@ -102,13 +102,13 @@ public class Database {
         }
     }
 
-    public boolean getThreads(Consumer<Thread> threadConsumer) {
+    @Nullable
+    public Collection<Thread> getThreads() {
         try {
-            threads.queryForAll().forEach(threadConsumer);
-            return true;
+            return threads.queryForAll();
         } catch (SQLException e) {
             Main.LOGGER.error("Failed to get threads", e);
-            return false;
+            return null;
         }
     }
 

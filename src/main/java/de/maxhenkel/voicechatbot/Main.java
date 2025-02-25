@@ -92,6 +92,7 @@ public class Main {
         CommandRegistry.applyCommands();
 
         EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
+        EXECUTOR.scheduleAtFixedRate(SupportThread::cleanupUninitializedThreads, 5L, 5L, TimeUnit.MINUTES);
 
         LOGGER.info("Sending startup message");
         StartupInfo.logStarted();

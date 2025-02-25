@@ -39,6 +39,7 @@ import java.awt.*;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -142,7 +143,13 @@ public class SupportThread {
         event.reply("Archiving all stale threads...").queue(hook -> {
             AtomicInteger removed = new AtomicInteger();
 
-            Main.DB.getThreads(t -> {
+            Collection<Thread> threads = Main.DB.getThreads();
+            if (threads == null) {
+                hook.editOriginal("Failed to archive threads.").queue();
+                return;
+            }
+
+            for (Thread t : threads) {
                 ThreadChannel thread = event.getJDA().getThreadChannelById(t.getThread());
                 if (thread == null) {
                     Main.DB.removeThread(t.getThread());
@@ -150,15 +157,14 @@ public class SupportThread {
                     return;
                 }
                 thread.getHistory().retrievePast(1).queue(messages -> {
-                    if (messages.isEmpty() || messages.get(0).getTimeCreated().toInstant()
+                    if (messages.isEmpty() || messages.getFirst().getTimeCreated().toInstant()
                             .isBefore(Instant.now().minus(Environment.SUPPORT_STALE_DAYS, ChronoUnit.DAYS))) {
 
                         SupportThreadUtils.closeThread(thread, t, event.getJDA().getSelfUser());
-                        Main.DB.removeThread(t.getThread());
                         updateProgress(hook, removed.incrementAndGet());
                     }
                 }, new ExceptionHandler());
-            });
+            }
 
             Main.EXECUTOR.schedule(() -> {
                 hook.editOriginal("Finished archiving %d threads.".formatted(removed.get())).queue();
@@ -546,4 +552,37 @@ public class SupportThread {
         SupportThreadUtils.updateStaffNotification(thread, "%S joined ✅".formatted(member.getAsMention()));
     }
 
+    public static void cleanupUninitializedThreads() {
+        Collection<Thread> threads = Main.DB.getThreads();
+        if (threads == null) {
+            Main.LOGGER.error("Failed to clean up uninitialized threads");
+            return;
+        }
+
+        for (Thread t : threads) {
+            ThreadChannel thread = Main.API.getThreadChannelById(t.getThread());
+            if (thread == null) {
+                Main.DB.removeThread(t.getThread());
+                return;
+            }
+            if (t.getNotifyMessage() > 0L) {
+                continue;
+            }
+            thread.getHistory().retrievePast(1).queue(messages -> {
+                if (messages.isEmpty() || messages.getFirst().getTimeCreated().toInstant()
+                        .isBefore(Instant.now().minus(Environment.SUPPORT_UNINITIALIZED_HOURS, ChronoUnit.HOURS))) {
+
+                    thread.sendMessageEmbeds(
+                            new EmbedBuilder()
+                                    .setDescription("""
+                                            This ticket was not submitted and did not have any activity in the last %d hours.
+                                            """.formatted(Environment.SUPPORT_UNINITIALIZED_HOURS))
+                                    .setColor(Color.RED)
+                                    .build()
+                    ).queue();
+                    SupportThreadUtils.closeThread(thread, t, Main.API.getSelfUser());
+                }
+            }, new ExceptionHandler());
+        }
+    }
 }
