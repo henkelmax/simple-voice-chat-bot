@@ -10,6 +10,9 @@ public class Thread {
     private long user;
     @DatabaseField(id = true)
     private long thread;
+    /**
+     * If the user is allowed to send messages in the thread
+     */
     @DatabaseField
     private boolean unlocked;
     @DatabaseField
