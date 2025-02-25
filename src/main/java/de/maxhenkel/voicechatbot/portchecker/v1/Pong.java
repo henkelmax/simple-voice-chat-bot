@@ -1,5 +1,6 @@
-package de.maxhenkel.voicechatbot.portchecker;
+package de.maxhenkel.voicechatbot.portchecker.v1;
 
+import de.maxhenkel.voicechatbot.portchecker.ByteBufUtils;
 import io.netty.buffer.ByteBuf;
 
 import java.util.UUID;

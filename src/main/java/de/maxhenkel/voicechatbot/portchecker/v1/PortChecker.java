@@ -1,6 +1,8 @@
-package de.maxhenkel.voicechatbot.portchecker;
+package de.maxhenkel.voicechatbot.portchecker.v1;
 
 import de.maxhenkel.voicechatbot.Environment;
+import de.maxhenkel.voicechatbot.portchecker.ByteBufUtils;
+import de.maxhenkel.voicechatbot.portchecker.MessageAppender;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;

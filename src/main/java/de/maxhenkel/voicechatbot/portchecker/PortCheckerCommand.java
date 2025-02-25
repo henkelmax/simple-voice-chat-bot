@@ -1,6 +1,7 @@
 package de.maxhenkel.voicechatbot.portchecker;
 
 import de.maxhenkel.voicechatbot.CommandRegistry;
+import de.maxhenkel.voicechatbot.portchecker.v1.PortChecker;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
