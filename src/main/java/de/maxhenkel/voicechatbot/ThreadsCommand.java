@@ -17,6 +17,7 @@ public class ThreadsCommand {
     }
 
     private static void onThreadsCommand(SlashCommandInteractionEvent event) {
+        event.getInteraction().deferReply(true).queue();
         StringBuilder sb = new StringBuilder();
         Collection<Thread> threads = Main.DB.getThreads();
         if (threads == null) {
@@ -39,11 +40,11 @@ public class ThreadsCommand {
         }
 
         if (sb.isEmpty()) {
-            event.getInteraction().reply("No open threads").setEphemeral(true).queue();
+            event.getHook().editOriginal("No open threads").queue();
             return;
         }
 
-        event.getInteraction().reply(sb.toString()).setEphemeral(true).queue();
+        event.getHook().editOriginal(sb.toString()).queue();
     }
 
 }
