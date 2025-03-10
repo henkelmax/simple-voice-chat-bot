@@ -26,11 +26,11 @@ public class ThreadsCommand {
         }
         for (Thread t : threads) {
             if (t.getNotifyMessage() <= 0L) {
-                return;
+                continue;
             }
             ThreadChannel thread = Main.API.getThreadChannelById(t.getThread());
             if (thread == null) {
-                return;
+                continue;
             }
             sb.append("<#%s>".formatted(thread.getId()));
             if (thread.getMembers().stream().anyMatch(threadMember -> threadMember.getIdLong() == event.getInteraction().getUser().getIdLong())) {
