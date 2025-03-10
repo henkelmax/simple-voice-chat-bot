@@ -33,8 +33,8 @@ public class ThreadsCommand {
                 continue;
             }
             sb.append("<#%s>".formatted(thread.getId()));
-            if (thread.getMembers().stream().anyMatch(threadMember -> threadMember.getIdLong() == event.getInteraction().getUser().getIdLong())) {
-                sb.append(" ✅");
+            if (thread.getMembers().stream().noneMatch(threadMember -> threadMember.getIdLong() == event.getInteraction().getUser().getIdLong())) {
+                sb.append(" \uD83C\uDFC3");
             }
             sb.append("\n");
         }
