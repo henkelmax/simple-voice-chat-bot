@@ -1,10 +1,12 @@
 package de.maxhenkel.voicechatbot;
 
 import de.maxhenkel.voicechatbot.db.Thread;
+import net.dv8tion.jda.api.entities.ThreadMember;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 import java.util.Collection;
+import java.util.List;
 
 public class ThreadsCommand {
 
@@ -33,7 +35,11 @@ public class ThreadsCommand {
                 continue;
             }
             sb.append("<#%s>".formatted(thread.getId()));
-            if (thread.getMembers().stream().noneMatch(threadMember -> threadMember.getIdLong() == event.getInteraction().getUser().getIdLong())) {
+            List<ThreadMember> members = thread.retrieveThreadMembers().stream().toList();
+            if (members.stream().anyMatch(threadMember -> threadMember.getIdLong() == event.getInteraction().getUser().getIdLong())) {
+                sb.append(" ✅");
+            }
+            if (members.stream().noneMatch(threadMember -> threadMember.getIdLong() == t.getUser())) {
                 sb.append(" \uD83C\uDFC3");
             }
             sb.append("\n");
