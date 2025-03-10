@@ -1,9 +1,11 @@
 package de.maxhenkel.voicechatbot;
 
 import de.maxhenkel.voicechatbot.db.Thread;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.ThreadMember;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.utils.TimeFormat;
 
 import java.util.Collection;
 import java.util.List;
@@ -41,6 +43,10 @@ public class ThreadsCommand {
             }
             if (members.stream().noneMatch(threadMember -> threadMember.getIdLong() == t.getUser())) {
                 sb.append(" \uD83C\uDFC3");
+            }
+            List<Message> messages = thread.getHistory().retrievePast(1).complete();
+            if (!messages.isEmpty()) {
+                sb.append(" (Last activity: ").append(TimeFormat.RELATIVE.format(messages.getFirst().getTimeCreated())).append(" by ").append(messages.getFirst().getAuthor().getAsMention()).append(")");
             }
             sb.append("\n");
         }
