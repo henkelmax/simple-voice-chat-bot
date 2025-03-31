@@ -18,6 +18,7 @@ public class MicNotWorkingIssue extends BaseIssue {
         questions.add("Which launcher are you using? *(Vanilla Launcher, Prism Launcher, CurseForge Launcher, ATLauncher etc.)*");
         questions.add("Which operating system are you using? *(Windows, MacOS, Linux etc.)*");
         questions.add("Which operating system version are you using? (MacOS 14, Windows 11 etc.)");
+        questions.add("Are you playing on a public server?");
         return questions;
     }
 
