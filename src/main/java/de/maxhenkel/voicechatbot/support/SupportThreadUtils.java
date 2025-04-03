@@ -130,7 +130,6 @@ public class SupportThreadUtils {
             thread.getManager()
                     .setArchived(true)
                     .setLocked(true)
-                    .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_HOUR)
                     .queue(
                             v -> updateStaffNotification(t, "Thread locked by %s ❌".formatted(locker.getAsMention())),
                             new ExceptionHandler()

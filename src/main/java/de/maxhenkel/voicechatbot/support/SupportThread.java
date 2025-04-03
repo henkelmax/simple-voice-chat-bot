@@ -128,7 +128,7 @@ public class SupportThread {
             return;
         }
         supportChannel.sendMessage("Support for %s".formatted(user.getAsMention())).queue(message -> {
-            message.createThreadChannel("Support thread for %s".formatted(user.getName())).setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_24_HOURS).queue(thread -> {
+            message.createThreadChannel("Support thread for %s".formatted(user.getName())).setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_WEEK).queue(thread -> {
                 event.getInteraction().reply("Hey %s, please follow the steps in your support thread: %s".formatted(user.getAsMention(), thread.getAsMention())).setEphemeral(true).queue();
                 thread.addThreadMember(user).queue(unused -> {
                     Main.DB.addThread(new Thread(user.getIdLong(), thread.getIdLong()));
@@ -314,15 +314,12 @@ public class SupportThread {
 
         if (thread == null) {
             event.getMessage().delete().queue(unused -> {
-                channel.getManager().setArchived(true).setLocked(true).setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_HOUR).queue();
+                channel.getManager().setArchived(true).setLocked(true).queue();
             }, new ExceptionHandler());
             return;
         }
 
         if (thread.isUnlocked() && event.getMember() != null) {
-            if (SupportThreadUtils.isStaff(event.getMember())) {
-                channel.getManager().setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_HOUR).queue();
-            }
             return;
         }
 
@@ -406,10 +403,6 @@ public class SupportThread {
                                     .setColor(Color.GREEN)
                                     .build()
                     ).addComponents(ActionRow.of(SupportThreadUtils.closeThreadButton()))
-                    .queue();
-
-            thread.getManager()
-                    .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_24_HOURS)
                     .queue();
 
             SupportThreadUtils.notifyStaff(thread, t);
