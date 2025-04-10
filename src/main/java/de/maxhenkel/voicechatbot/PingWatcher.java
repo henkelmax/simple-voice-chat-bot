@@ -68,7 +68,7 @@ public class PingWatcher {
         builder.setColor(Color.RED);
         event.getMessage().replyEmbeds(builder.build()).queue();
 
-        member.timeoutFor(Duration.of(warningAmount - 3L, ChronoUnit.HOURS)).reason("Pinging admins or moderators").queue();
+        member.timeoutFor(Duration.of(Math.max(warningAmount - 3L, 1L), ChronoUnit.HOURS)).reason("Pinging admins or moderators").queue();
     }
 
     private static boolean isNoPing(Member member, @Nullable Guild server) {
