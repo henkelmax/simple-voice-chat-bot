@@ -21,7 +21,6 @@ public class PingWatcher {
     private static final Pattern MENTION_REGEX = Pattern.compile("<@(\\d+)>");
     private static final Map<Long, Integer> WARNED_USERS = new HashMap<>();
 
-
     public static void onMessage(MessageReceivedEvent event) {
         User user = event.getAuthor();
         Guild server = event.getGuild();
@@ -56,6 +55,7 @@ public class PingWatcher {
         WARNED_USERS.put(user.getIdLong(), warningAmount);
 
         if (warningAmount <= 3 && pingedMembers.stream().noneMatch(m -> isNoPing(m, server))) {
+            member.timeoutFor(Duration.of(10L * warningAmount, ChronoUnit.SECONDS)).reason("Pinging admins or moderators").queue();
             EmbedBuilder builder = new EmbedBuilder();
             builder.setDescription("%s!\nPlease disable pings when replying to admins or moderators!".formatted(user.getAsMention()));
             builder.setColor(Color.ORANGE);
@@ -68,7 +68,7 @@ public class PingWatcher {
         builder.setColor(Color.RED);
         event.getMessage().replyEmbeds(builder.build()).queue();
 
-        member.timeoutFor(Duration.of(1, ChronoUnit.HOURS)).reason("Pinging admins or moderators").queue();
+        member.timeoutFor(Duration.of(warningAmount - 3L, ChronoUnit.HOURS)).reason("Pinging admins or moderators").queue();
     }
 
     private static boolean isNoPing(Member member, @Nullable Guild server) {
