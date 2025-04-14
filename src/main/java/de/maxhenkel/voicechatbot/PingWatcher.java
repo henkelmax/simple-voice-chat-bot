@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
 public class PingWatcher {
 
     private static final Pattern MENTION_REGEX = Pattern.compile("<@(\\d+)>");
-    private static final Map<Long, Integer> WARNED_USERS = new HashMap<>();
 
     public static void onMessage(MessageReceivedEvent event) {
         User user = event.getAuthor();
@@ -51,8 +50,7 @@ public class PingWatcher {
             }
         }
 
-        int warningAmount = WARNED_USERS.getOrDefault(user.getIdLong(), 0) + 1;
-        WARNED_USERS.put(user.getIdLong(), warningAmount);
+        int warningAmount = Main.DB.getAndIncreasePings(user.getIdLong());
 
         if (warningAmount <= 3 && pingedMembers.stream().noneMatch(m -> isNoPing(m, server))) {
             member.timeoutFor(Duration.of(10L * warningAmount, ChronoUnit.SECONDS)).reason("Pinging admins or moderators").queue();

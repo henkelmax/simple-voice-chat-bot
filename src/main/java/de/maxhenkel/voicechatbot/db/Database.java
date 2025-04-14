@@ -17,12 +17,16 @@ public class Database {
 
     private final ConnectionSource connectionSource;
     private final Dao<Thread, Long> threads;
+    private final Dao<Ping, Long> pings;
 
     public Database() throws SQLException {
         connectionSource = new JdbcConnectionSource("jdbc:sqlite:%s".formatted(Environment.DATABASE_PATH));
 
         TableUtils.createTableIfNotExists(connectionSource, Thread.class);
         threads = DaoManager.createDao(connectionSource, Thread.class);
+
+        TableUtils.createTableIfNotExists(connectionSource, Ping.class);
+        pings = DaoManager.createDao(connectionSource, Ping.class);
     }
 
     public boolean addThread(Thread thread) {
@@ -109,6 +113,24 @@ public class Database {
         } catch (SQLException e) {
             Main.LOGGER.error("Failed to get threads", e);
             return null;
+        }
+    }
+
+    public int getAndIncreasePings(long user) {
+        try {
+            Ping ping = pings.queryForId(user);
+            if (ping == null) {
+                ping = new Ping(user, 1, System.currentTimeMillis());
+                pings.create(ping);
+            } else {
+                ping.setPingCount(ping.getPingCount() + 1);
+                ping.setLastPing(System.currentTimeMillis());
+                pings.update(ping);
+            }
+            return ping.getPingCount();
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to get pings", e);
+            return 1;
         }
     }
 
