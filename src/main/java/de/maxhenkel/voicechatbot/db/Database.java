@@ -137,6 +137,7 @@ public class Database {
     private static final long WEEK_MS = 1000L * 60L * 60L * 24L * 7L;
 
     public void cleanupPings() {
+        Main.LOGGER.info("Cleaning up pings");
         try {
             long currentTime = System.currentTimeMillis();
             List<Ping> pingList = pings.queryForAll();
