@@ -93,6 +93,7 @@ public class Main {
 
         EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
         EXECUTOR.scheduleAtFixedRate(SupportThread::cleanupUninitializedThreads, 5L, 5L, TimeUnit.MINUTES);
+        EXECUTOR.scheduleAtFixedRate(PingWatcher::cleanupPings, 0L, 1L, TimeUnit.DAYS);
 
         LOGGER.info("Sending startup message");
         StartupInfo.logStarted();

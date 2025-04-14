@@ -134,4 +134,20 @@ public class Database {
         }
     }
 
+    private static final long WEEK_MS = 1000L * 60L * 60L * 24L * 7L;
+
+    public void cleanupPings() {
+        try {
+            long currentTime = System.currentTimeMillis();
+            List<Ping> pingList = pings.queryForAll();
+            for (Ping ping : pingList) {
+                if (currentTime - ping.getLastPing() > WEEK_MS) {
+                    pings.delete(ping);
+                    Main.LOGGER.info("Deleted ping entry for user {}", ping.getUser());
+                }
+            }
+        } catch (SQLException e) {
+            Main.LOGGER.error("Failed to cleanup pings", e);
+        }
+    }
 }

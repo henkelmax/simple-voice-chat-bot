@@ -79,4 +79,7 @@ public class PingWatcher {
         return member.getRoles().stream().anyMatch(role -> role.getIdLong() == Environment.NO_PING_ROLE);
     }
 
+    public static void cleanupPings() {
+        Main.DB.cleanupPings();
+    }
 }
