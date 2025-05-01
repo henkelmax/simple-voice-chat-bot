@@ -15,7 +15,7 @@ public class NotConnectedIssue extends BaseIssue {
     @Override
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
-        questions.add("What server software are you using? *(Fabric, Forge, Bukkit, Spigot, Paper etc.)*");
+        questions.add("What server software are you using? *(Fabric, NeoForge, Forge, Bukkit, Paper etc.)*");
         questions.add("Are you using a proxy server? *(BungeeCord, Waterfall, Velocity etc.)*");
         questions.add("Are you using any DDoS protection? *(TCPShield etc)*");
         questions.add("Where are you hosting your server? *(Bloom, Aternos, Own PC, VPS etc.)*");

@@ -15,7 +15,7 @@ public class PortInUseIssue extends BaseIssue {
     @Override
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
-        questions.add("What server software are you using? *(Fabric, Forge, Bukkit, Spigot, Paper etc.)*");
+        questions.add("What server software are you using? *(Fabric, NeoForge, Forge, Bukkit, Paper etc.)*");
         questions.add("Are you running any other Minecraft servers on that machine?");
         questions.add("Where are you hosting your server? *(Bloom, Aternos, Own PC, VPS etc.)*");
         questions.add("Which port are you using for the voice chat?");

@@ -15,7 +15,7 @@ public class NoPermissionsIssue extends BaseIssue {
     @Override
     protected List<String> getQuestionsInternal() {
         List<String> questions = super.getQuestionsInternal();
-        questions.add("What server software are you using? *(Fabric, Forge, Bukkit, Spigot, Paper etc.)*");
+        questions.add("What server software are you using? *(Fabric, NeoForge, Forge, Bukkit, Paper etc.)*");
         questions.add("Are you using any permission manager mod/plugin? *(LuckPerms, PermissionsEx etc.)*");
         return questions;
     }
