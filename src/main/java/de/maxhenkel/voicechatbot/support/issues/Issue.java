@@ -1,7 +1,9 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public interface Issue {
@@ -12,7 +14,8 @@ public interface Issue {
 
     List<String> getQuestions();
 
-    void onSelectIssue(ThreadChannel textChannel);
+    @Nullable
+    MessageEmbed getDisclaimer();
 
     void sendQuestions(ThreadChannel thread);
 

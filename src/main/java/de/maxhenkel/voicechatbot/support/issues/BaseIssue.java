@@ -5,9 +5,11 @@ import de.maxhenkel.voicechatbot.Main;
 import de.maxhenkel.voicechatbot.support.SupportThread;
 import de.maxhenkel.voicechatbot.support.SupportThreadUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -50,9 +52,10 @@ public class BaseIssue implements Issue {
         return questions;
     }
 
+    @Nullable
     @Override
-    public void onSelectIssue(ThreadChannel textChannel) {
-
+    public MessageEmbed getDisclaimer() {
+        return null;
     }
 
     @Override

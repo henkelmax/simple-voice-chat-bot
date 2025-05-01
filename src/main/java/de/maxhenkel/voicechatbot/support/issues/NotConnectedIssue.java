@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import java.awt.*;
 import java.util.List;
@@ -24,8 +24,8 @@ public class NotConnectedIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(ThreadChannel textChannel) {
-        textChannel.sendMessageEmbeds(new EmbedBuilder()
+    public MessageEmbed getDisclaimer() {
+        return new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         If you are hosting your server with a Minecraft hosting provider, please do the following:
@@ -40,7 +40,6 @@ public class NotConnectedIssue extends BaseIssue {
                         - For reliable performance, always configure port forwarding directly through your hosting provider or router instead of relying on solutions like tunneling services or VPNs.
                         """)
                 .setColor(Color.RED)
-                .build()
-        ).queue();
+                .build();
     }
 }

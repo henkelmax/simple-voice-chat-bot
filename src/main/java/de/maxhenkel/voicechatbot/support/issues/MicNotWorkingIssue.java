@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import java.awt.*;
 import java.util.List;
@@ -23,15 +23,14 @@ public class MicNotWorkingIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(ThreadChannel textChannel) {
-        textChannel.sendMessageEmbeds(new EmbedBuilder()
+    public MessageEmbed getDisclaimer() {
+        return new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         If you are on **MacOS**, you need to use [Prism Launcher](https://prismlauncher.org/) or any other supported launcher to get access to your microphone!
                         For more information read [this](https://modrepo.de/minecraft/voicechat/wiki/macos).
                         """)
                 .setColor(Color.RED)
-                .build()
-        ).queue();
+                .build();
     }
 }

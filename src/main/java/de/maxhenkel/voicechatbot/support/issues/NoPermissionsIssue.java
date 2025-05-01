@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import java.awt.*;
 import java.util.List;
@@ -21,8 +21,8 @@ public class NoPermissionsIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(ThreadChannel textChannel) {
-        textChannel.sendMessageEmbeds(new EmbedBuilder()
+    public MessageEmbed getDisclaimer() {
+        return new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         Please make sure you granted the following permissions for every player:
@@ -40,7 +40,7 @@ public class NoPermissionsIssue extends BaseIssue {
                         Read [this](https://essentialsx.net/do-not-use-mohist.html) for more information.
                         """)
                 .setColor(Color.RED)
-                .build()
-        ).queue();
+                .build();
     }
+
 }

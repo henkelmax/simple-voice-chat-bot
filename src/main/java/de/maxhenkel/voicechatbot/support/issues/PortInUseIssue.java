@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import java.awt.*;
 import java.util.List;
@@ -26,8 +26,8 @@ public class PortInUseIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(ThreadChannel textChannel) {
-        textChannel.sendMessageEmbeds(new EmbedBuilder()
+    public MessageEmbed getDisclaimer() {
+        return new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         If the voice chat port is already in use, please check the following:
@@ -36,7 +36,6 @@ public class PortInUseIssue extends BaseIssue {
                         - Make sure the server query is not running on the same port as the voice chat. You can find the query port in your server.properties (`query.port`).
                         """)
                 .setColor(Color.RED)
-                .build()
-        ).queue();
+                .build();
     }
 }

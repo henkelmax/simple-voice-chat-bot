@@ -6,10 +6,7 @@ import de.maxhenkel.voicechatbot.support.issues.Issue;
 import de.maxhenkel.voicechatbot.support.issues.Issues;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageType;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
@@ -190,7 +187,7 @@ public class SupportThread {
             return;
         }
 
-        String value = options.get(0).getAsString();
+        String value = options.getFirst().getAsString();
         Issue issue = Issues.byId(value);
         if (issue == null) {
             return;
@@ -209,7 +206,11 @@ public class SupportThread {
                         .build()
         ).queue();
 
-        issue.onSelectIssue(thread);
+        MessageEmbed disclaimer = issue.getDisclaimer();
+        if (disclaimer != null) {
+            thread.sendMessageEmbeds(disclaimer).queue();
+        }
+
         issue.sendQuestions(thread);
 
         event.reply(issue.getName())
@@ -503,17 +504,18 @@ public class SupportThread {
         }
         List<String> chosenOptions = event.getValues();
 
-        if (chosenOptions.size() <= 0) {
+        if (chosenOptions.isEmpty()) {
             return;
         }
 
-        String selection = chosenOptions.get(0);
+        String selection = chosenOptions.getFirst();
 
         clearAllComponents(thread).thenAccept(messages -> {
             Issue issue = Issues.byId(selection);
             if (issue == null) {
                 return;
             }
+
             thread.sendMessageEmbeds(new EmbedBuilder()
                     .setTitle("`%s` selected.".formatted(issue.getName()))
                     .setDescription("""
@@ -524,7 +526,12 @@ public class SupportThread {
                     .build()
 
             ).queue();
-            issue.onSelectIssue(thread);
+
+            MessageEmbed disclaimer = issue.getDisclaimer();
+            if (disclaimer != null) {
+                thread.sendMessageEmbeds(disclaimer).queue();
+            }
+
             issue.sendQuestions(thread);
         }).exceptionally(throwable -> {
             Main.LOGGER.error("Failed to clear all components", throwable);

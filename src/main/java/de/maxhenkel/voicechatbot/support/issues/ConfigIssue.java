@@ -1,7 +1,7 @@
 package de.maxhenkel.voicechatbot.support.issues;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import java.awt.*;
 
@@ -12,8 +12,8 @@ public class ConfigIssue extends BaseIssue {
     }
 
     @Override
-    public void onSelectIssue(ThreadChannel textChannel) {
-        textChannel.sendMessageEmbeds(new EmbedBuilder()
+    public MessageEmbed getDisclaimer() {
+        return new EmbedBuilder()
                 .setTitle("Disclaimer")
                 .setDescription("""
                         While editing configuration files, make sure the client/server is stopped.
@@ -25,7 +25,6 @@ public class ConfigIssue extends BaseIssue {
                 .addField("Fabric/Forge/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`", false)
                 .addField("Bukkit/Spigot/Paper config location", "`plugins/voicechat/voicechat-server.properties`", false)
                 .setColor(Color.RED)
-                .build()
-        ).queue();
+                .build();
     }
 }
