@@ -36,7 +36,7 @@ public class NotConnectedIssue extends BaseIssue {
                         **Important Notes**:
                         - We cannot assist with configuration or port setup for individual hosting providers. Due to the unique requirements of each service, please contact your hosters support team directly for guidance.
                         - **Hybrid servers** (e.g., Mohist, Magma, Arclight) are not officially supported due to compatibility and stability risks. [Learn why here](https://essentialsx.net/do-not-use-mohist.html).
-                        - **Tunneling services** (e.g., playit.gg, Essential, e4mc, ngrok, Localtonet) and **VPNs** (e.g., ZeroTier, Radmin, Hamachi) are not officially supported, as these setups are overly complex, require advanced technical expertise, and are prone to configuration errors.
+                        - **Tunneling/world hosting services** (e.g., playit.gg, Essential, e4mc, ngrok, Localtonet) and **VPNs** (e.g., ZeroTier, Radmin, Hamachi) are not officially supported, as these setups are overly complex, require advanced technical expertise, and are prone to configuration errors.
                         - For reliable performance, always configure port forwarding directly through your hosting provider or router instead of relying on solutions like tunneling services or VPNs.
                         """)
                 .setColor(Color.RED)
