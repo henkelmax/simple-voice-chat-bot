@@ -17,7 +17,7 @@ public class PortInUseIssue extends BaseIssue {
         List<String> questions = super.getQuestionsInternal();
         questions.add("What server software are you using? *(Fabric, NeoForge, Forge, Bukkit, Paper etc.)*");
         questions.add("Are you running any other Minecraft servers on that machine?");
-        questions.add("Where are you hosting your server? *(Bloom, Aternos, Own PC, VPS etc.)*");
+        questions.add("Where are you hosting your server? *(Bloom, BisectHosting, Own PC, VPS etc.)*");
         questions.add("Which port are you using for the voice chat?");
         questions.add("Do you have server query enabled? *(`enable-query` option in server.properties)*");
         questions.add("On which port is your server query running? *(`query.port` option in server.properties)*");

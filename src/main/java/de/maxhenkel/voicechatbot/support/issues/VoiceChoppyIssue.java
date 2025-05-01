@@ -18,7 +18,7 @@ public class VoiceChoppyIssue extends BaseIssue {
         questions.add("What server software are you using? *(Fabric, NeoForge, Forge, Bukkit, Paper etc.)*");
         questions.add("Are you using a proxy server? *(BungeeCord, Waterfall, Velocity etc.)*");
         questions.add("Are you using any DDoS protection? *(TCPShield etc)*");
-        questions.add("Where are you hosting your server? *(Bloom, Aternos, Own PC, VPS etc.)*");
+        questions.add("Where are you hosting your server? *(Bloom, BisectHosting, Own PC, VPS etc.)*");
         questions.add("Are you using any tunneling service/mod or VPN? *(playit.gg, e4mc, ngrok, ZeroTier, Radmin, Hamachi etc.)*");
         return questions;
     }
