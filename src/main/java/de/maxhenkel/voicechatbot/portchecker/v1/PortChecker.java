@@ -27,6 +27,8 @@ public class PortChecker extends PortCheckerBase {
     protected void checkPortSync(SocketAddress address) throws SocketException {
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setSoTimeout(Environment.PORT_CHECKER_TIMEOUT);
+            boolean success = false;
+            int lowestPing = -1;
             for (int i = 0; i < Environment.PORT_CHECKER_ATTEMPTS; i++) {
                 try {
                     sendPing(socket, address);
@@ -37,11 +39,12 @@ public class PortChecker extends PortCheckerBase {
                 try {
                     Pong pong = receivePong(socket);
                     int ping = (int) (System.currentTimeMillis() - pong.getTimestamp());
-                    appender
-                            .addLog("Got a response in %s ms".formatted(ping))
-                            .finishSuccess("Voice chat port is open.\nPing `%s ms`.".formatted(ping))
-                            .updateMessage();
-                    return;
+                    appender.addLog("Got a response in %s ms".formatted(ping)).updateMessage();
+                    success = true;
+                    if (lowestPing < 0 || ping < lowestPing) {
+                        lowestPing = ping;
+                    }
+                    Thread.sleep(Environment.PORT_CHECKER_TIMEOUT);
                 } catch (SocketTimeoutException e) {
                     appender.addLog("Attempting to ping (%s/%s)".formatted(i + 1, Environment.PORT_CHECKER_ATTEMPTS)).updateMessage();
                 } catch (Exception e) {
@@ -49,10 +52,14 @@ public class PortChecker extends PortCheckerBase {
                     return;
                 }
             }
-            appender
-                    .addLog("Timed out after %s attempts".formatted(Environment.PORT_CHECKER_ATTEMPTS))
-                    .finishWithUnsuccessful("Timed out after %s attempts.".formatted(Environment.PORT_CHECKER_ATTEMPTS))
-                    .updateMessage();
+            if (success) {
+                appender.finishSuccess("Voice chat port is open.\nPing `%s ms`.".formatted(lowestPing)).updateMessage();
+            } else {
+                appender
+                        .addLog("Timed out after %s attempts".formatted(Environment.PORT_CHECKER_ATTEMPTS))
+                        .finishWithUnsuccessful("Timed out after %s attempts.".formatted(Environment.PORT_CHECKER_ATTEMPTS))
+                        .updateMessage();
+            }
         }
     }
 
