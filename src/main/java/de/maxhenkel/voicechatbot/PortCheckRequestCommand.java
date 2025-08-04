@@ -8,10 +8,10 @@ import java.awt.*;
 
 public class PortCheckRequestCommand {
 
-    private static final String LOGS_COMMAND = "portcheckrequest";
+    private static final String PORT_CHECK_REQUEST_COMMAND = "portcheckrequest";
 
     public static void init() {
-        CommandRegistry.registerCommand(LOGS_COMMAND, "Asks a user their server IP and voice chat port for the port checker",
+        CommandRegistry.registerCommand(PORT_CHECK_REQUEST_COMMAND, "Asks a user their server IP and voice chat port for the port checker",
                 PortCheckRequestCommand::onPortCheckRequest,
                 Permission.MODERATE_MEMBERS
         );
