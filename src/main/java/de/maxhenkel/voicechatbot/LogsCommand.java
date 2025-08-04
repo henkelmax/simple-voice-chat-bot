@@ -24,6 +24,9 @@ public class LogsCommand {
                 
                 **Server Logs**
                 On the server your logs are located in your Minecraft server directory in `logs/latest.log`.
+                
+                
+                *Note that any logs you send here will be uploaded to [mclo.gs](https://mclo.gs)!*
                 """);
         builder.setUrl("https://modrepo.de/minecraft/how_to_get_logs");
 
