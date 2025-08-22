@@ -61,6 +61,15 @@ public class MessageAppender {
         EmbedBuilder builder = new EmbedBuilder();
         builder.setTitle("Check unsuccessful");
         builder.setDescription(message);
+        builder.setColor(Color.RED);
+        addFinalEmbed(builder);
+        return this;
+    }
+
+    public MessageAppender finishWithUnstable(String message) {
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setTitle("Unstable connection");
+        builder.setDescription(message);
         builder.setColor(Color.ORANGE);
         addFinalEmbed(builder);
         return this;
