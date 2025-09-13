@@ -55,7 +55,7 @@ public class QuestionCommand {
                     }
 
                     EmbedBuilder builder = new EmbedBuilder();
-                    builder.setDescription("This channel is not the appropriate place to ask questions %s. Please open a support ticket in %s and select the issue type `General Question`."
+                    builder.setDescription("This channel is not the correct place to ask questions %s. Please open a support ticket in %s and select the issue type `General Question`."
                             .formatted(user.getAsMention(), supportChannel.getAsMention()));
 
                     message.replyEmbeds(builder.build()).queue();
