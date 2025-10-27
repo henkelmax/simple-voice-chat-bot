@@ -7,6 +7,7 @@ import de.maxhenkel.voicechatbot.support.ThreadCooldown;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -77,6 +78,11 @@ public class Main {
             @Override
             public void onThreadMemberJoin(@NotNull ThreadMemberJoinEvent event) {
                 SupportThread.onThreadMemberJoin(event);
+            }
+
+            @Override
+            public void onGuildMemberRemove(@NotNull GuildMemberRemoveEvent event) {
+                SupportThread.onThreadMemberLeaveServer(event);
             }
         });
 

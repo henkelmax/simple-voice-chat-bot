@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -550,6 +551,25 @@ public class SupportThread {
             return;
         }
         SupportThreadUtils.updateStaffNotification(thread, "%S joined ✅".formatted(member.getAsMention()));
+    }
+
+    public static void onThreadMemberLeaveServer(GuildMemberRemoveEvent event) {
+        Thread t = SupportThreadUtils.getThread(event.getUser().getIdLong());
+        if (t == null) {
+            return;
+        }
+        ThreadChannel thread = Main.API.getThreadChannelById(t.getThread());
+        if (thread == null) {
+            Main.DB.removeThread(t.getThread());
+            return;
+        }
+        thread.sendMessageEmbeds(
+                new EmbedBuilder()
+                        .setDescription("The owner of this thread left the server.")
+                        .setColor(Color.RED)
+                        .build()
+        ).queue();
+        SupportThreadUtils.closeThread(thread, t, Main.API.getSelfUser());
     }
 
     public static void cleanupUninitializedThreads() {
