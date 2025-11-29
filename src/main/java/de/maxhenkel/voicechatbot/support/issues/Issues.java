@@ -14,6 +14,7 @@ public class Issues {
                 new ConfigIssue(),
                 new NoPermissionsIssue(),
                 new PortInUseIssue(),
+                new NoIconsIssue(),
                 new VoiceChoppyIssue(),
                 new OtherIssue(),
                 new CrashIssue(),
