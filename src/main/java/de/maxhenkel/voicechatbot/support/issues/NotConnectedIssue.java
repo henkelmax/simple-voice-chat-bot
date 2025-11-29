@@ -19,6 +19,7 @@ public class NotConnectedIssue extends BaseIssue {
         questions.add("Are you using a proxy server? *(BungeeCord, Waterfall, Velocity etc.)*");
         questions.add("Are you using any DDoS protection? *(TCPShield etc)*");
         questions.add("Where are you hosting your server? *(Bloom, BisectHosting, Own PC, VPS etc.)*");
+        questions.add("In case you are hosting with a Minecraft server hoster - Did you follow their guide (if present) and contact their support? *(Read the disclaimer)*");
         questions.add("Are you using any tunneling service/mod or VPN? *(playit.gg, e4mc, ngrok, ZeroTier, Radmin, Hamachi etc.)*");
         return questions;
     }
