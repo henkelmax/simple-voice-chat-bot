@@ -4,7 +4,7 @@ COPY . .
 
 RUN mvn install
 
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jdk-alpine
 
 RUN mkdir /bot
 
