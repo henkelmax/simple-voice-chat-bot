@@ -34,6 +34,7 @@ import net.dv8tion.jda.api.interactions.modals.ModalInteraction;
 import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 
 import java.awt.*;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -321,7 +322,8 @@ public class SupportThread {
             return;
         }
 
-        if (thread.isUnlocked() && event.getMember() != null) {
+        Member member = event.getMember();
+        if (thread.isUnlocked() && member != null) {
             return;
         }
 
@@ -329,15 +331,17 @@ public class SupportThread {
             event.getMessage().delete().queue();
             return;
         }
+
         event.getMessage().reply("%s, please follow the instructions of the bot to be able to write messages in this thread!".formatted(messageAuthor.getAsMention())).queue(message -> {
             Main.EXECUTOR.schedule(() -> {
                 event.getMessage().delete().queue();
-            }, 3, TimeUnit.SECONDS);
-            Main.EXECUTOR.schedule(() -> {
                 message.delete().queue();
-            }, 10, TimeUnit.SECONDS);
+            }, 4, TimeUnit.MINUTES);
         }, new ExceptionHandler());
 
+        if (member != null) {
+            member.timeoutFor(Duration.of(5, ChronoUnit.MINUTES)).reason("Support thread timeout").queue();
+        }
     }
 
     private static void onThreadCreated(ThreadChannel thread, User user) {
@@ -348,6 +352,7 @@ public class SupportThread {
                         Please make sure that you have read everything thoroughly and that your problem is certainly not covered there.
                         If this is the case, please generate a support key [here](https://modrepo.de/minecraft/voicechat/wiki/support).
                         After clicking the `Get Support!` button below this message you will be asked to enter the support key.
+                        Do not send any messages in this thread until you get asked to answer questions.
                         """)
                 .addField("Important", "*By clicking the get support button, you agree that any logs you upload here will be uploaded to [mclo.gs](https://mclo.gs)!*", false)
                 .addField("Useful Links",
