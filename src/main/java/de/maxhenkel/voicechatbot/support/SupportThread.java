@@ -33,6 +33,7 @@ import net.dv8tion.jda.api.interactions.modals.Modal;
 import net.dv8tion.jda.api.interactions.modals.ModalInteraction;
 import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 
+import javax.annotation.Nullable;
 import java.awt.*;
 import java.time.Duration;
 import java.time.Instant;
@@ -59,6 +60,7 @@ public class SupportThread {
     public static final String SELECT_MENU_ISSUE = "select_menu_issue";
 
     public static final String CLOSE_COMMAND = "close";
+    public static final String INACTIVE_COMMAND = "inactive";
     public static final String UNLOCK_COMMAND = "unlock";
     public static final String ISSUE_COMMAND = "issue";
     public static final String CLEANUP_COMMAND = "cleanup";
@@ -75,6 +77,7 @@ public class SupportThread {
         ButtonRegistry.registerButton(BUTTON_CONFIRM_ANSWERS, SupportThread::onConfirmAnswersButtonPressed);
 
         CommandRegistry.registerCommand(CLOSE_COMMAND, "Closes a support thread", SupportThread::onCloseCommand);
+        CommandRegistry.registerCommand(INACTIVE_COMMAND, "Closes a support thread as inactive", SupportThread::onInactiveCommand);
         CommandRegistry.registerCommand(UNLOCK_COMMAND, "Unlocks a thread", SupportThread::onUnlockCommand);
         CommandRegistry.registerCommand(ISSUE_COMMAND, "Sends an issue template to a thread",
                 Collections.singletonList(
@@ -247,6 +250,14 @@ public class SupportThread {
     }
 
     private static void onCloseCommand(SlashCommandInteractionEvent event) {
+        handleClose(event, event.getInteraction().getUser(), false);
+    }
+
+    private static void onInactiveCommand(SlashCommandInteractionEvent event) {
+        handleClose(event, null, true);
+    }
+
+    private static void handleClose(SlashCommandInteractionEvent event, @Nullable User user, boolean inactive) {
         ThreadChannel thread = SupportThreadUtils.getThread(event.getInteraction());
         SlashCommandInteraction interaction = event.getInteraction();
         if (thread == null) {
@@ -257,16 +268,53 @@ public class SupportThread {
             return;
         }
         Thread t = Main.DB.getThread(thread.getIdLong());
-        if (t != null) {
-            SupportThreadUtils.closeThread(thread, t, interaction.getUser());
-            interaction.reply("Thread closed")
-                    .setEphemeral(true)
-                    .queue();
-        } else {
+        if (t == null) {
             interaction.reply("Can't find thread")
                     .setEphemeral(true)
                     .queue();
+            return;
         }
+        if (user == null) {
+            user = Main.API.getSelfUser();
+        }
+
+        if (!inactive) {
+            SupportThreadUtils.closeThread(thread, t, user);
+            interaction.reply("Thread closed")
+                    .setEphemeral(true)
+                    .queue();
+            return;
+        }
+
+        thread.getHistory().retrievePast(1).queue(messages -> {
+            if (messages.isEmpty()) {
+                interaction.reply("No messages found")
+                        .setEphemeral(true)
+                        .queue();
+                return;
+            }
+            Duration timeElapsed = Duration.between(messages.getFirst().getTimeCreated().toInstant(), Instant.now());
+            int hours = Math.toIntExact(timeElapsed.toHours());
+            if (hours < Environment.SUPPORT_UNINITIALIZED_HOURS) {
+                interaction.reply("Not enough time has passed")
+                        .setEphemeral(true)
+                        .queue();
+                return;
+            }
+
+            thread.sendMessageEmbeds(
+                    new EmbedBuilder()
+                            .setDescription("""
+                                    This ticket did not have any activity in the last %d hours.
+                                    """.formatted(hours))
+                            .setColor(Color.RED)
+                            .build()
+            ).queue();
+            SupportThreadUtils.closeThread(thread, t, Main.API.getSelfUser());
+            interaction.reply("Thread closed")
+                    .setEphemeral(true)
+                    .queue();
+        }, new ExceptionHandler());
     }
 
     private static void onConfirmAnswersButtonPressed(ButtonInteractionEvent event) {
