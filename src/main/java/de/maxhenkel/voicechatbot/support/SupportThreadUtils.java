@@ -142,7 +142,7 @@ public class SupportThreadUtils {
     }
 
     public static CompletableFuture<Void> notifyStaff(ThreadChannel thread, Thread t) {
-        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL);
+        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL_ID);
         if (textChannel == null) {
             Main.LOGGER.warn("Failed to find notification channel");
             return CompletableFuture.completedFuture(null);
@@ -184,7 +184,7 @@ public class SupportThreadUtils {
     }
 
     public static void updateStaffNotification(Thread t, String message) {
-        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL);
+        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL_ID);
         if (textChannel == null) {
             Main.LOGGER.warn("Failed to find notification channel");
             return;

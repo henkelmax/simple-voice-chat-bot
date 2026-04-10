@@ -10,7 +10,7 @@ import java.time.Instant;
 public class StartupInfo {
 
     public static void logStarted() {
-        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL);
+        TextChannel textChannel = Main.API.getTextChannelById(Environment.SUPPORT_NOTIFICATION_CHANNEL_ID);
         if (textChannel == null) {
             Main.LOGGER.warn("Failed to find notification channel");
             return;
