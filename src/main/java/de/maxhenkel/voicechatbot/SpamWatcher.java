@@ -70,7 +70,7 @@ public class SpamWatcher {
     }
 
     public static void logSpam(User user) {
-        TextChannel logsChannel = Main.API.getTextChannelById(Environment.LOGS_CHANNEL);
+        TextChannel logsChannel = Main.API.getTextChannelById(Environment.LOGS_CHANNEL_ID);
         if (logsChannel == null) {
             Main.LOGGER.warn("Failed to find logs channel");
             return;
