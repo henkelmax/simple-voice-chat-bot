@@ -64,12 +64,19 @@ by entering the `/cleanup` command.
 
 ## Environment Variables
 
-| Variable                          | Default value | Description                     |
-|-----------------------------------|---------------|---------------------------------|
-| `TOKEN`                           | *Required*    | The discord bot token           |
-| `DB_PATH`                         | `database.db` | The path to the sqlite database |
-| `SUPPORT_CHANNEL_ID`              | *Required*    | The support channel ID          |
-| `SUPPORT_THREAD_CHANNEL_ID`       | *Required*    | The support thread channel ID   |
-| `SUPPORT_NOTIFICATION_CHANNEL_ID` | *Required*    | The notification channel ID     |
-| `LOGS_CHANNEL_ID`                 | *Required*    | The log channel ID              |
-| `SUPPORT_ROLE`                    | *Required*    | The support role                |
+| Variable                          | Default value | Description                                                                  |
+|-----------------------------------|---------------|------------------------------------------------------------------------------|
+| `TOKEN`                           | *Required*    | The discord bot token                                                        |
+| `DB_PATH`                         | `database.db` | The path to the sqlite database                                              |
+| `SERVER_ID`                       | *Required*    | The server ID                                                                |
+| `SUPPORT_CHANNEL_ID`              | *Required*    | The support channel ID                                                       |
+| `SUPPORT_THREAD_CHANNEL_ID`       | *Required*    | The support thread channel ID                                                |
+| `SUPPORT_NOTIFICATION_CHANNEL_ID` | *Required*    | The notification channel ID                                                  |
+| `LOGS_CHANNEL_ID`                 | *Required*    | The log channel ID                                                           |
+| `SUPPORT_ROLE`                    | *Required*    | The support role                                                             |
+| `NO_PING_ROLE`                    | *Required*    | The role that shouldn't be pinged                                            |
+| `DEFAULT_VOICE_CHAT_PORT`         | `24454`       | The default voice chat port                                                  |
+| `PORT_CHECKER_ATTEMPTS`           | `10`          | The number of attempts to check the port                                     |
+| `PORT_CHECKER_TIMEOUT`            | `1000`        | The timeout in milliseconds to check the port                                |
+| `SUPPORT_STALE_DAYS`              | `3`           | The number of days after which a support thread is considered stale          |
+| `SUPPORT_UNINITIALIZED_HOURS`     | `3`           | The number of hours after which a support thread is considered uninitialized |
