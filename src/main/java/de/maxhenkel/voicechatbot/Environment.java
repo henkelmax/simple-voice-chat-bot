@@ -8,6 +8,7 @@ public class Environment {
     public static final long SUPPORT_CHANNEL_ID = Long.parseLong(env("SUPPORT_CHANNEL_ID", "0"));
     public static final long SUPPORT_THREAD_CHANNEL_ID = Long.parseLong(env("SUPPORT_THREAD_CHANNEL_ID", "0"));
     public static final long SUPPORT_NOTIFICATION_CHANNEL = Long.parseLong(env("SUPPORT_NOTIFICATION_CHANNEL", "0"));
+    public static final long LOGS_CHANNEL = Long.parseLong(env("LOGS_CHANNEL", "0"));
     public static final long SUPPORT_ROLE = Long.parseLong(env("SUPPORT_ROLE", "0"));
     public static final long NO_PING_ROLE = Long.parseLong(env("NO_PING_ROLE", "0"));
     public static final int DEFAULT_VOICE_CHAT_PORT = Integer.parseInt(env("DEFAULT_VOICE_CHAT_PORT", "24454"));
@@ -40,6 +41,10 @@ public class Environment {
         }
         if (SUPPORT_NOTIFICATION_CHANNEL <= 0L) {
             Main.LOGGER.error("Invalid SUPPORT_NOTIFICATION_CHANNEL environment variable");
+            valid = false;
+        }
+        if (LOGS_CHANNEL <= 0L) {
+            Main.LOGGER.error("Invalid LOGS_CHANNEL environment variable");
             valid = false;
         }
         if (SUPPORT_ROLE <= 0L) {

@@ -21,6 +21,9 @@ public class PingWatcher {
     private static final Pattern MENTION_REGEX = Pattern.compile("<@(\\d+)>");
 
     public static void onMessage(MessageReceivedEvent event) {
+        if (!event.isFromGuild()) {
+            return;
+        }
         User user = event.getAuthor();
         Guild server = event.getGuild();
         Member member = event.getMember();

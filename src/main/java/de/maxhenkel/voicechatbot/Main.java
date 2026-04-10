@@ -58,6 +58,7 @@ public class Main {
                 if (Environment.NO_PING_ROLE > 0L) {
                     PingWatcher.onMessage(event);
                 }
+                SpamWatcher.onMessage(event);
             }
 
             @Override
@@ -101,6 +102,7 @@ public class Main {
         EXECUTOR.scheduleAtFixedRate(ThreadCooldown::cleanupCooldowns, 1L, 1L, TimeUnit.HOURS);
         EXECUTOR.scheduleAtFixedRate(SupportThread::cleanupUninitializedThreads, 5L, 5L, TimeUnit.MINUTES);
         EXECUTOR.scheduleAtFixedRate(PingWatcher::cleanupPings, 0L, 1L, TimeUnit.DAYS);
+        EXECUTOR.scheduleAtFixedRate(SpamWatcher::cleanup, 10L, 10L, TimeUnit.MINUTES);
 
         LOGGER.info("Sending startup message");
         StartupInfo.logStarted();

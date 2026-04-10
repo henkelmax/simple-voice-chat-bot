@@ -353,6 +353,9 @@ public class SupportThread {
     }
 
     public static void onMessage(MessageReceivedEvent event) {
+        if (!event.isFromGuild()) {
+            return;
+        }
         ThreadChannel channel = SupportThreadUtils.getThread(event.getChannel());
         if (channel == null) {
             return;
