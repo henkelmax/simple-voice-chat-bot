@@ -31,9 +31,10 @@ public class SpamWatcher {
             return;
         }
         SpamData spamData = SPAM_DATA.computeIfAbsent(user.getIdLong(), k -> new SpamData());
-        if (!spamData.addAndCheck(event.getChannel().getIdLong())) {
+        if (spamData.isBanned() || !spamData.addAndCheck(event.getChannel().getIdLong())) {
             return;
         }
+        spamData.setBanned();
         // Send DM before ban so bot and user have a shared server
         sendDm(event.getGuild(), user, () -> {
             member.ban(10, TimeUnit.MINUTES).queue(v -> {
@@ -91,6 +92,7 @@ public class SpamWatcher {
 
     private static class SpamData {
         private final Map<Long, Long> channelTimes;
+        private boolean banned;
 
         public SpamData() {
             channelTimes = new ConcurrentHashMap<>();
@@ -101,6 +103,14 @@ public class SpamWatcher {
             channelTimes.put(channelId, time);
             clean(time);
             return channelTimes.size() >= CHANNEL_COUNT;
+        }
+
+        public void setBanned() {
+            banned = true;
+        }
+
+        public boolean isBanned() {
+            return banned;
         }
 
         /**
