@@ -20,7 +20,7 @@ public class ConfigIssue extends BaseIssue {
                         If the config values keep resetting, this is most likely the problem.
                         If you can't find the config files, make sure the client/server was started at least once, so that the files are generated.
                         """)
-                .addField("Fabric/Forge/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`", false)
+                .addField("Fabric/NeoForge/Forge/Quilt config location", "*Server*:\n`config/voicechat/voicechat-server.properties`\n*Client*:\n`config/voicechat/voicechat-client.properties`", false)
                 .addField("Bukkit/Spigot/Paper config location", "`plugins/voicechat/voicechat-server.properties`", false)
                 .setColor(Color.RED)
                 .build();
