@@ -34,6 +34,8 @@ public class NotConnectedIssue extends BaseIssue {
                         - **If no guide is available**, reach out to your hosting providers support team directly for assistance.
                         - **If the guide doesn't work**, contact your hosters support team first to resolve the issue.
                         
+                        If you are not hosting the server yourself, please reach out to your servers admin/support!
+                        
                         **Important Notes**:
                         - We cannot assist with configuration or port setup for individual hosting providers. Due to the unique requirements of each service, please contact your hosters support team directly for guidance.
                         - **Hybrid servers** (e.g., Mohist, Magma, Arclight) are not officially supported due to compatibility and stability risks. [Learn why here](https://essentialsx.net/do-not-use-mohist.html).
