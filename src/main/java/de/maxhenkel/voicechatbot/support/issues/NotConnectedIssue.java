@@ -41,6 +41,7 @@ public class NotConnectedIssue extends BaseIssue {
                         - **Hybrid servers** (e.g., Mohist, Magma, Arclight) are not officially supported due to compatibility and stability risks. [Learn why here](https://essentialsx.net/do-not-use-mohist.html).
                         - **Tunneling/world hosting services** (e.g., playit.gg, Essential, e4mc, ngrok, Localtonet) and **VPNs** (e.g., ZeroTier, Radmin, Hamachi) are not officially supported, as these setups are overly complex, require advanced technical expertise, are prone to configuration errors, or simply don't work with the voice chat.
                         - For reliable performance, always configure port forwarding directly through your hosting provider or router instead of relying on solutions like tunneling services or VPNs.
+                        - If you have [OpSec](https://modrinth.com/mod/opsec) installed, make sure you have **Mod Whitelist** set to `AUTO`.
                         """)
                 .setColor(Color.RED)
                 .build();
