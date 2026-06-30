@@ -20,7 +20,6 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +41,11 @@ public class Main {
 
         EXECUTOR = Executors.newSingleThreadScheduledExecutor();
         DB = new Database();
-        API = JDABuilder.create(Environment.TOKEN, Arrays.asList(GatewayIntent.values()))
+        API = JDABuilder.create(Environment.TOKEN,
+                        GatewayIntent.GUILD_MEMBERS,
+                        GatewayIntent.GUILD_MESSAGES,
+                        GatewayIntent.MESSAGE_CONTENT
+                )
                 .setActivity(Activity.watching("Support"))
                 .setAutoReconnect(true)
                 .build().awaitReady();
