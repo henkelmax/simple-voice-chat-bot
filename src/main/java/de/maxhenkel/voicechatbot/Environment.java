@@ -16,6 +16,7 @@ public class Environment {
     public static final int PORT_CHECKER_TIMEOUT = Integer.parseInt(env("PORT_CHECKER_TIMEOUT", "1000"));
     public static final int SUPPORT_STALE_DAYS = Integer.parseInt(env("SUPPORT_STALE_DAYS", "3"));
     public static final int SUPPORT_UNINITIALIZED_HOURS = Integer.parseInt(env("SUPPORT_UNINITIALIZED_HOURS", "3"));
+    public static final boolean DISABLE_PRIVILEGED_INTENTS = Boolean.parseBoolean(env("DISABLE_PRIVILEGED_INTENTS", "false"));
 
     private static String env(String envVar, String def) {
         String var = System.getenv(envVar);
