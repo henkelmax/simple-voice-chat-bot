@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
@@ -11,14 +12,9 @@ import javax.annotation.Nullable;
 import java.awt.*;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class PingWatcher {
-
-    private static final Pattern MENTION_REGEX = Pattern.compile("<@(\\d+)>");
 
     public static void onMessage(MessageReceivedEvent event) {
         if (!event.isFromGuild()) {
@@ -40,18 +36,12 @@ public class PingWatcher {
             return;
         }
 
-        String message = event.getMessage().getContentRaw();
+        Message referenced = event.getMessage().getReferencedMessage();
+        long repliedAuthorId = referenced == null ? -1L : referenced.getAuthor().getIdLong();
 
-        Matcher matcher = MENTION_REGEX.matcher(message);
-
-        List<Member> pingedMembers = new ArrayList<>();
-        while (matcher.find()) {
-            String id = matcher.group(1);
-            Member pingedMember = server.getMemberById(id);
-            if (pingedMember != null) {
-                pingedMembers.add(pingedMember);
-            }
-        }
+        List<Member> pingedMembers = mentionedMembers.stream()
+                .filter(m -> m.getIdLong() != repliedAuthorId)
+                .toList();
 
         int warningAmount = Main.DB.getAndIncreasePings(user.getIdLong());
 
