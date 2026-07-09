@@ -80,3 +80,4 @@ by entering the `/cleanup` command.
 | `PORT_CHECKER_TIMEOUT`            | `1000`        | The timeout in milliseconds to check the port                                |
 | `SUPPORT_STALE_DAYS`              | `3`           | The number of days after which a support thread is considered stale          |
 | `SUPPORT_UNINITIALIZED_HOURS`     | `3`           | The number of hours after which a support thread is considered uninitialized |
+| `DISABLE_PRIVILEGED_INTENTS`      | `false`       | Set to `true` to run without privileged intents                              |
